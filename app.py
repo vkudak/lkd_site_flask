@@ -1,7 +1,6 @@
 from flask import Flask, Response, render_template, redirect, url_for, request, session, abort
 from star_util import read_stars, plot3
 from datetime import datetime
-# from astropy.time import Time
 import ast
 from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
 from flask_sqlalchemy import SQLAlchemy
