@@ -90,8 +90,8 @@ ul h4 {
 }
 
 #content {
-	/*float: left;*/
-	float: center;
+	float: left;
+	/*float: center;*/
 	/*text-align-last: center;*/
 	padding: 0;
 	/*margin-right: 5.35em;*/
