@@ -127,7 +127,6 @@ def plot2(star, lon, lat, elev):
     name, ra, dec = star["Name"], star["RA"], star["DEC"]
 
     location = EarthLocation.from_geodetic(lon, lat, elev)
-    # print (ra, dec)
     obj = SkyCoord(ra, dec, frame='icrs')
 
     today = datetime.today()

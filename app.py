@@ -16,7 +16,6 @@ year = today.year
 app = Flask(__name__)
 
 # config
-# app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
 app.config.update(
     DEBUG=True,
     SQLALCHEMY_DATABASE_URI="sqlite:///users.db",
