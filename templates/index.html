@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+        {% block content %}
+        <!--<div id="page">-->
+            <!--<div id="content">-->
+                <div id="post1">
+                <br>
+                    <h2>Welcome to Laboratory of Space Research, UzhNU</h2>
+                    <img class="alignleft" src="{{url_for('static', filename='images/AVR2.jpg') }}"
+                    width="450" height="350" alt="" />
+                    <p> Main research areas in LSR are: <br>
+                        <li>Artificial Satellites (Astrometry and Photometry GEO/LEO objects)</li>
+                        <li> Variable Stars </li>
+                        <li> Asteroids </li>
+                    <br>
+                    <br>
+
+                        <h2> Projects </h2>
+                            <a href="{{ url_for('eb_list') }}"> Photometry of Selected Eclipsing Binary Systems </a><br>
+                            <a href=http://hebe.astro.amu.edu.pl/p_about.php> Selection effects in spins and shapes of asteroids </a>
+
+{#                        This is a homepage for project "Photometry of selected Eclipsing binary stars".#}
+{#                        Observation details are in "Observation" tab for registered users.#}
+                    </p>
+
+                </div>
+                <br class="clearfix" />
+            <!--</div>-->
+
+            <!--<br class="clearfix" />-->
+        <!--</div>-->
+        {% endblock %}

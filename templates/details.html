@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+        {% block content %}
+{#                <div id="post12">#}
+                    <h2>Details of EB <br> {{star["Name"]}}</h2>
+                    <table style="width:100%">
+                    <colgroup>
+                        <col span="1" style="width: 15%;">
+                        <col span="1" style="width: 15%;">
+                        <col span="1" style="width: 15%;">
+                        <col span="1" style="width: 15%;">
+                        <col span="1" style="width: 15%;">
+                        <col span="1" style="width: 10%;">
+                        <col span="1" style="width: 15%;">
+                    </colgroup>
+
+                      <tr>
+                          <th>EB Name</th>
+                          <th>RA</th>
+                          <th>DEC</th>
+                          <th>Period</th>
+                          <th>Epoch</th>
+                          <th>mag</th>
+                          <th>Hours vis.</th>
+{#                          <th>Details</th>#}
+                      </tr>
+                      <tr>
+                          <td style="text-align:center">{{ star['Name'] }}</td>
+                          <td style="text-align:center">{{ star["RA"] }}</td>
+                          <td style="text-align:center">{{ star["DEC"] }}</td>
+                          <td style="text-align:center">{{ star["Period"] }}</td>
+                          <td style="text-align:center">{{ star["Epoch"] }}</td>
+                          <td style="text-align:center">{{ star["Mag"] }}</td>
+                          <td style="text-align:center"> {{ star["Dur"] }} </td>
+{#                          <td style="text-align:center"> {{ star["Publications"] }} </td>#}
+                      </tr>
+                </table>
+                    <br>
+
+                    <img class="alignleft" src="{{ url_for('static', filename=graph) }}"
+                    width="700" height="400" alt="" />
+                    <p>
+                        Phase coverage info...
+                    {% for x in star["Phase"] %}
+                        <li>{{ x[0] }} [{{ x[1][0] }} -- {{ x[1][1] }}]: {{ x[2] }}</li>
+                    {% else %}
+                        <li>No observations yet..</li>
+                    {% endfor %}
+                    </p>
+
+{#                </div>#}
+                <br class="clearfix" />
+        {% endblock %}

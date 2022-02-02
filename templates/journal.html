@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+        {% block content %}
+<script src="{{ STATIC_PREFIX }}js/lkd_scripts.js?v={random number/string}"></script>
+
+<div id="post3">
+    <a id="show_id" onclick="sp_f1();" class="link" style="cursor: pointer;">[+Add Observation]</a>
+        <span id="spoiler_id" style="display: none">
+            <a onclick="sp_f2();" class="link" style="cursor: pointer;">[Hide Observation window]</a> <br>
+                            <!--<div id="add_obs">-->
+                              <FORM name="add_obs" action="/journal.html" method="post" enctype="multipart/form-data"
+                                    onsubmit="return validate_obsForm()">{% csrf_token %}
+                              <!--<P>-->
+                                <LABEL for="text">DateTime:</LABEL>
+                                <input type="date" name="obs_date">&nbsp;&nbsp;
+                                  <input type="time" id='ntime' name="obs_time" value="07:00">
+                                  <label id='now' onclick='now_time();'>Now</label>
+                                  <br>
+                                <LABEL for="text">Description: </LABEL><br>
+                                <textarea name="obs_desc" id="text" cols=45 rows=10></textarea><br>
+                                <LABEL for="file">File: </LABEL>
+                                <input type="file" multiple name="content" id="file"><br>
+
+                                <LABEL for="select">Type: </LABEL>
+                                <select id="select" name="obs_type">
+                                    {% for type in types %}
+                                    <option value="{{type.name}}">{{type.name}}</option>
+                                    {% empty %}
+                                    <option value="None">None</option>
+                                    {% endfor %}
+                                </select><br>
+                                <p>
+                                    <INPUT type="submit" value="Додати"> <INPUT type="reset">
+                                </p>
+                              <!--</P>-->
+                              </FORM>
+                            <!--</div>-->
+        </span>
+        <hr size="1" color="#8EA2AD">
+            <!--color="#CC7F5C">-->
+
+        {% for obs in obss %}
+        <div id="obs">
+                  DateTime:
+                    <samp>{{ obs.date }}</samp><br>
+                  Description: <br>
+                    <samp style="margin-left:10px;">
+                        {{ obs.description }}</samp><br>
+                    {% for f in obs.content %}
+                  File:
+                      <a href=Observations/{{f}} title="download file">
+                          <script>
+                            get_name("{{f}}")
+                          </script>
+                      </a><br>
+                    {% endfor %}
+                  <!--Author:-->
+                      <!--<samp>{{ obs.user }}</samp><br>-->
+                  Type:
+                      <samp>{{ obs.category }}</samp>&nbsp;&nbsp;
+                              Author:
+                      <samp>{{ obs.user }}</samp>
+            <hr size="1" color="#8EA2AD">
+        </div>
+        {% empty %}
+            <br>Sorry, no observations in DataBase.
+        {% endfor %}
+
+</div> <!--div post1 -->
+
+        {% endblock %}
+
+    {% block page %}
+        <div id="sidebar">
+                Monthly Archive:<br>
+                {% for line in archive_counts %}
+                  {% if line.isyear %}
+                    {% if not forloop.first %}
+                      <br>
+                    {% endif %}
+                      <a href="/journal/{{ line.year }}">{{ line.year }}</a>({{ line.count }})
+                    <br>
+                    {% else %}
+                    <menu>
+                        <li>
+                        <a href="/journal/{{ line.yearmonth }}">{{ line.monthname }}</a> ({{ line.count }})<br>
+                        </li>
+                    </menu>
+                  {% endif %}
+                {%empty%}
+                    No data
+                {% endfor %}
+		</div>
+    {% endblock %}

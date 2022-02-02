@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+        {% block content %}
+        <!--<div id="page">-->
+            <!--<div id="content">-->
+                <div id="post1">
+                    <h2>Welcome to LSR</h2>
+                    <img class="alignleft" src="{{url_for('static', filename='images/AVR2.jpg')}}"
+                         width="350" height="250" alt="" />
+                    <p>
+                        The Laboratory of Space Research of Uzhhorod National University is studying near-Earth space.
+                        We observe artificial satellites of the Earth, small bodies of the solar system, variable stars.
+                    </p>
+                    LSR on <a href="https://uk.wikipedia.org/wiki/%D0%9B%D0%B0%D0%B1%D0%BE%D1%80%D0%B0%D1%82%D0%BE%D1%80%D1%96%D1%8F_%D0%BA%D0%BE%D1%81%D0%BC%D1%96%D1%87%D0%BD%D0%B8%D1%85_%D0%B4%D0%BE%D1%81%D0%BB%D1%96%D0%B4%D0%B6%D0%B5%D0%BD%D1%8C_%D0%A3%D0%B6%D0%9D%D0%A3">
+                    wikipedia</a>
+                </div>
+                <div id="post1">
+                    <img class="alignleft" src="{{url_for('static', filename='images/TPL-1M.jpg') }}"
+                         width="350" height="350" alt="" />
+                    <p>
+                        Telescope TPL-1M - designed as laser ranging system (D = 1 m, f = 11.6 m).
+                        Mounted in Derenivka in year 2000. <br>
+                        Now used with QHY-174M-GPS CMOS camera (installed on guider) for photometry of LEO satellites.
+                    </p>
+                </div>
+
+                <div id="post1">
+                    <img class="alignleft" src="{{url_for('static', filename='images/ChV400.jpg') }}"
+                         width="350" height="450" alt="" />
+                    <p>
+                        Telescope ChV400 - Newton with corrector (D = 400 mm, f = 1750 mm).
+                        Used with FLI P9000 CCD camera for astrometry and photometry of GEO satellites,
+                        photometry of variable stars and asteroids. Equipped with BVR filters.
+                    </p>
+                </div>
+                <div id="post1">
+                    <img class="alignleft" src="{{url_for('static', filename='images/BRC250.jpg') }}"
+                         width="350" height="450" alt="" />
+                    <p>
+                        Telescope BRC250M - (D = 250 mm, f = 1268 mm).
+                        Used with Alta F16M CCD camera for astrometry of GEO satellites.
+                    </p>
+                </div>
+                <br class="clearfix" />
+            <!--</div>-->
+
+            <!--<br class="clearfix" />-->
+        <!--</div>-->
+        {% endblock %}

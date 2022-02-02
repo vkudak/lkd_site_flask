@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+    {% block content %}
+        <h2 id="text_log"> Register </h2>
+        <form method="Post" action="">
+            {{ form.hidden_tag() }}
+            {{ form.username }} <br>
+            {{ form.password }} <br>
+            {{ form.site_name }} <br>
+            {{ form.site_lat }} <br>
+            {{ form.site_lon }} <br>
+            {{ form.site_elev }} <br>
+            {{ form.submit }}
+        </form>
+    {% endblock %}
