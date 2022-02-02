@@ -251,6 +251,9 @@ def plot3(star, user):
     ax1.set_ylabel('Altitude [deg]')
 
     # plt.subplots_adjust(top=0.88)  # to leave the title and not cut it !
+
+    if not os.path.exists(os.path.join("static", "tmp")):
+        os.mkdir(os.path.join("static", "tmp"))
     name2 = name + "_" + str(time.time()) + ".png"
     name3 = f'{os.path.join("static", "tmp", name2)}'
 
