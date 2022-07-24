@@ -15,4 +15,15 @@
                 </div>
             {% endif %}
         </div>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul>
+        {% for message in messages %}
+        <li style="color:red">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
     {% endblock %}
