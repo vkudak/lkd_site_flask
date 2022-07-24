@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+
+{% if sat_search is defined and sat_search != None and sat_search.get_lcs()|length %}
+<br>
+    <div style="text-align: center;">
+        <p style="text-align:left;margin:0 auto;display: inline-block;">
+            Satellite NORAD=<b>{{sat_search.norad }}</b>,
+            COSPAR=<b>{{sat_search.cospar }}</b>,
+            NAME=<b>{{sat_search.name }}</b>
+        </p>
+    <br>
+    <br>
+    </div>
+        <div id="lc_table" style="width:50%; max-width: 820px; margin-right: auto; margin-left: auto">
+         <table id="sat_lc" style="width:100%; margin-right: auto; margin-left: auto;">
+            <thead>
+              <tr>
+                  <th style="text-align:center;">DateTime Start (UT)</th>
+                  <th style="text-align:center;" >Filter</th>
+                  <th style="text-align:center;" >Details</th>
+              </tr>
+            </thead>
+{#                {% for lc in sat_search.get_lcs() %}#}
+{#                          <tr style="line-height: 15px">#}
+{#                            <td style="text-align:center;"> {{ lc.ut_start }}</td>#}
+{#                            <td style="text-align:center;"> {{ lc.band }} </td>#}
+{#                              <td style="text-align:center">#}
+{#                              <a href="{{url_for('sat.sat_lc_plot', lc_id=lc.id) }}"> LC plot </a>#}
+{#                              </td>#}
+{#                          </tr>#}
+{##}
+{#                {% endfor %}#}
+         </table>
+        </div>
+{% endif %}
+
+
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul>
+        {% for message in messages %}
+        <li style="color:red">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+{% endwith %}
+
+{#    <script type="text/javascript">#}
+{#    $(document).ready(function () {#}
+{#    $('#sat_lc').DataTable({#}
+{#        paging: true,#}
+{#        ordering: true,#}
+{#        info: true,#}
+{#        fixedColumns:   {#}
+{#            heightMatch: 'none'#}
+{#        }#}
+{#        });#}
+{#    });#}
+{#    </script>#}
+
+    <script>
+    $(document).ready(function() {
+    var empDataTable = $('#sat_lc').DataTable({
+                'processing': true,
+                'serverSide': true,
+                'serverMethod': 'post',
+                'ajax': {
+                    'url':'/ajaxfile_lc/{{ sat_search.id }}'
+                },
+                'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                searching: true,
+                sort: true,
+                'columns': [
+                    { data: 'ut_start' },
+                    { data: 'filter' },
+                    { data: 'details', orderable: false  },
+                ]
+            });
+    });
+    </script>
+
+{% endblock %}

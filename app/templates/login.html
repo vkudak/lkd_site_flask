@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+    {% block content %}
+        <div id="logreg">
+            <h2 id="text_log"> Log In </h2>
+            <form method="Post" action="" id="logf">
+            {{ form.hidden_tag() }}
+            {{ form.username }}<br>
+            {{ form.password }}<br>
+            {{ form.submit }}
+            </form>
+            <br>
+            {% if current_user.is_authenticated and current_user.username in ["vkudak", "admin" ]%}
+                <div id="sign">
+                    <a href="{{ url_for('auth.register')}}">Sign Up</a>
+                </div>
+            {% endif %}
+        </div>
+    {% endblock %}

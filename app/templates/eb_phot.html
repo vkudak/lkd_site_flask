@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+        {% block content %}
+        <!--<div id="page">-->
+            <!--<div id="content">-->
+                <div id="post1">
+                    <h2>Photometry of Selected Eclipsing Binary Systems</h2>
+
+                    <img src="{{url_for('static', filename='images/star_model.png')}}" alt="Trulli" style="width:80%; display:block;     margin-right: auto; margin-left: auto">
+
+<!--                     <img class="alignleft" src="{{url_for('static', filename='images/star_model.png')}}"
+                         width="350" height="250" alt="" /> -->
+                    <br>
+                    <p>
+                        According to our research, there are still a lot of relatively bright EB systems that don't have any published solution of physical parameters.
+                        That's why in 2019 Laboratory of Space Research in cooperation with the
+                        <a href=https://ktfa.science.upjs.sk> 
+                            Department of Theoretical Physics and Astrophysics of UPJŠ University in Košice
+                        </a>
+                        start a program aimed to explore such EB systems in any possible way (photometry, spectrometry, period analysis etc.) and publish the results.
+                        For these purposes we will also use photometrical data from all ground based surveys (SWASP, ASAS-N, etc.) and spase missions (KEPLER, TESS, ets.).
+                        <br>
+
+                        <a href="{{ url_for('eb.eb_list') }}"> List of EB Systems</a> ( for participants only )
+
+                        <br>                        
+                         <h1>Publications:</h1>
+                          <ol>
+                             <li>
+                                <p>V. Kudak, M. Fedurco, V. Perig and Š. Parimucha, <cite>A photometric study of two neglected eclipsing binaries</cite>, 2021 Res. Astron. Astrophys. 21, 174. <a href=https://iopscience.iop.org/article/10.1088/1674-4527/21/7/174/meta> (link) </a></p>
+                             </li>
+<!--                              <li>
+                                <p>Reto Meier, <cite>Professional Android 4 Application Development</cite>, 3rd edition, (2012)</p>
+                             </li> -->
+                          </ol>
+
+                    </p>
+
+                </div>
+ 
+                <br class="clearfix" />
+            <!--</div>-->
+
+            <!--<br class="clearfix" />-->
+        <!--</div>-->
+        {% endblock %}

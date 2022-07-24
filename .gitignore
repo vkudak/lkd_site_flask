@@ -1,0 +1,5 @@
+/flask_session/
+/app/dev.db
+/.env
+/app/static/tmp_sat/*.*
+/app/static/tmp/*.*

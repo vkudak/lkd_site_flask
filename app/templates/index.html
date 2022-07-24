@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+        {% block content %}
+        <!--<div id="page">-->
+            <!--<div id="content">-->
+                <div id="post1">
+                <br>
+                    <h2>Welcome to Laboratory of Space Research, UzhNU</h2>
+                    <img class="alignleft" src="{{url_for('static', filename='images/AVR2.jpg') }}"
+                    width="500" height="350" alt="" />
+                    <p> Main research areas in LSR are: <br>
+                        <li>Artificial Satellites (Astrometry and Photometry GEO/LEO objects)</li>
+                        <li> Variable Stars </li>
+                        <li> Asteroids </li>
+                    <br>
+                    <br>
+
+                        <h2> Projects </h2>
+                            <a href="{{ url_for('eb.eb_phot') }}"> Photometry of Selected Eclipsing Binary Systems </a><br>
+                            <a href=http://hebe.astro.amu.edu.pl/p_about.php> Selection Effects in Spins and Shapes of Asteroids </a><br>
+                            <a href="{{ url_for('sat.sat_phot') }}"> Database of Artificial Satellites Photometry</a>
+
+                    </p>
+
+                </div>
+
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul>
+        {% for message in messages %}
+        <li style="color:red">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+{% endwith %}
+
+                <br class="clearfix" />
+            <!--</div>-->
+
+            <!--<br class="clearfix" />-->
+        <!--</div>-->
+        {% endblock %}

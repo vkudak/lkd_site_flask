@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block content %}
+
+
+<!-- Table  of available SATELLITES-->
+{#    https://datatables.net/examples/server_side/simple.html #}
+<br>
+   <div style="text-align: center; width:80%; max-width: 820px; margin-left: auto; margin-right: auto;">
+       <table id="sat_table"
+
+              class="display"
+              style="width:100%">
+
+        <thead>
+          <tr>
+              <th style="text-align:center;">Norad</th>
+              <th style="text-align:center;">Cospar</th>
+              <th style="text-align:center;">Name</th>
+              <th style="text-align:center;">LC</th>
+              <th style="text-align:center;">n2yo</th>
+          </tr>
+        </thead>
+{#            {% for sat in sats %}#}
+{#                      <tr style="line-height: 10px">#}
+{#                          <td style="text-align:center;">#}
+{#                              <a href="{{ url_for('sat.sat_details', sat_id=sat.id) }}">#}
+{#                              {{ sat.norad }}#}
+{#                              </a>#}
+{#                          </td>#}
+{#                          <td style="text-align:center">{{ sat.cospar }}</td>#}
+{#                          <td style="text-align:center">{{ sat.name }}</td>#}
+{#                          <td style="text-align:center">{{ sat.get_lcs()|length}}</td>#}
+{#                          <td style="text-align:center">#}
+{#                              <a href="https://www.n2yo.com/satellite/?s={{ sat.norad }}"> link </a>#}
+{#                          </td>#}
+{#                      </tr>#}
+{##}
+{##}
+{#            {% else %}#}
+{#                No Satellites in DataBase#}
+{#            {% endfor %}#}
+    </table>
+
+{#</details>#}
+</div>
+
+{#            show ADD_LC button#}
+{#    Dropzone#}
+{#    https://www.youtube.com/watch?v=m-t5ZNHNa_Y&ab_channel=Cairocoders#}
+{#    https://tutorial101.blogspot.com/2021/07/drag-and-drop-file-upload-using.html#}
+
+{#    https://flask-dropzone.readthedocs.io/en/latest/basic.html#save-uploads-with-flask#}
+{#    https://github.com/helloflask/flask-dropzone/blob/master/examples/click-upload/app.py#}
+  {% if user.is_admin %}
+      <div style="border-collapse: collapse; margin: 0; text-indent: 0ch; text-align:center">
+        <details>
+          <summary>Add lightcurves to DataBase</summary>
+            <form method="Post" action="" enctype="multipart/form-data">
+                {{ lc_form.hidden_tag() }}
+                {{ lc_form.csrf_token }}
+                <p style="line-height:10px; display: inline-block;"> File(s) </p>
+                {{ lc_form.lc_file }} <br>
+
+                {{ lc_form.add }}
+            </form>
+        </details>
+      </div>
+  {% endif %}
+
+{#    show form errors#}
+{% if user.is_admin  and lc_form.errors|length %}
+<p style="line-height:10px;"> Error message: </p>
+{% for field, errors in lc_form.errors.items() %}
+<div class="alert alert-error" style="background-color:rgba(100, 0, 0, 50);">
+    {{ lc_form[field].label }}: {{ ', '.join(errors) }}
+</div>
+{% endfor %}
+{% endif %}
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <ul>
+        {% for message in messages %}
+        <li style="color:red">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+{% endwith %}
+
+
+<script>
+    $(document).ready(function() {
+    var empDataTable = $('#sat_table').DataTable({
+                'processing': true,
+                'serverSide': true,
+                'serverMethod': 'post',
+                'ajax': {
+                    'url':'/ajaxfile_sat'
+                },
+                'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
+                searching: true,
+                sort: true,
+                'columns': [
+                    { data: 'norad' },
+                    { data: 'cospar' },
+                    { data: 'name' },
+                    { data: 'LC', orderable: false },
+                    { data: 'n2yo', orderable: false },
+                ]
+            });
+    });
+</script>
+
+{% endblock %}

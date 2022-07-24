@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+Design by Free CSS Templates
+http://www.freecsstemplates.org
+Released for free under a Creative Commons Attribution 3.0 License
+
+Name       : Erasure
+Description: A two-column, fixed-width design with a dark color scheme.
+Version    : 1.0
+Released   : 20120205
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="description" content="" />
+<meta name="keywords" content="" />
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<title>Space Research in Uzhgorod</title>
+<link href="http://fonts.googleapis.com/css?family=Oswald" rel="stylesheet" type="text/css" />
+
+    <!--  ?v={random number/string}   to add random number and update cache-->
+    <link rel="stylesheet" type="text/css" href="{{url_for('static', filename='style.css')}}" />
+    <link rel="shortcut icon" href="{{url_for('static', filename='favicon.ico')}}" type="image/x-icon">
+    <!--<link rel="icon" type="image/ico" href="{{STATIC_PREFIX}}favicon.ico">-->
+
+    <script type="text/javascript" src="{{url_for('static', filename='js/jquery-3.5.1.js')}}"></script>
+    <script type="text/javascript" src="{{url_for('static', filename='js/jquery.dataTables.min.js')}}"></script>
+    <link href="{{url_for('static', filename='jquery.dataTables.min.css')}}" rel="stylesheet">
+
+</head>
+
+<body>
+<div id="wrapper">
+	<div id="header">
+		<div id="logo">
+			<h1><a href="#">LSR</a></h1>
+            <h2>Laboratory of Space Research, UzhNU</h2>
+{#			<h2>Space research in Uzhhorod</h2>#}
+		</div>
+        <div id="uname">
+            {% if current_user and current_user.is_authenticated %}
+{#            {% if usr is defined %}#}
+{#                <a> Logged in as:</a> {{usr.username}}#}
+                <a> Logged in as:</a> {{current_user.username}}
+                <a href="{{ url_for('auth.logout')}}">Logout</a>
+            {% else %}
+            <a>Please Log in</a>
+            {% endif %}
+        </div>
+		<div id="menu">
+			<ul>
+				<li class="first current_page_item"><a href="{{ url_for('home.index') }}">Homepage</a></li>
+{#                <li class="first current_page_item"><a href="index.html">Homepage</a></li>#}
+{#				<li><a href="{{ url_for('eb_list') }}">EB List</a></li>#}
+{#                <div class="dropdown">#}
+{#                    <span><li><a>Projects</a></li></span>#}
+{#                    <div class="dropdown-content">#}
+{#                        <li> <a> Artificial Satellites </a></li>#}
+{#                        <li> <a> Variable Stars </a></li>#}
+{#                        <li> <a> Asteroids </a></li>#}
+{#                    </div>#}
+{#                </div>#}
+				<li><a href="{{ url_for('home.about') }}">About</a></li>
+                <li><a href="{{ url_for('auth.login')}}">Login</a> </li>
+				<li class="last"><a href="{{ url_for('home.contact')}}">Contact</a></li>
+			</ul>
+        </div>
+			<br class="clearfix" />
+        </div>
+		</div>
+	</div>
+    <div id="page">
+            <div id="content">
+                <!--CONTENT-->
+                {% block content %}
+
+                {% endblock %}
+                <!--CONTENT-->
+            </div>
+
+<!--            {% block page %} {% endblock %}-->
+      <br class="clearfix" />
+    </div>
+
+
+</div>
+<div id="footer">
+    &copy;Copyright 2013 - <script>document.write(new Date().getFullYear())</script>. All rights reserved
+<!--	&copy;Copyright 2013-{{year}}. All rights reserved.-->
+</div>
+</body>
+</html>

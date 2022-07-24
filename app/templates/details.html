@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+        {% block content %}
+                <div id="post12" style="width:100%; margin-right: auto; margin-left: auto" >
+                    <h2>Details of EB <br>{{star.star_name}} </h2>
+                    <table style="width:100%">
+                    <colgroup>
+                        <col span="1" style="width: 15%;">
+                        <col span="1" style="width: 10%;">
+                        <col span="1" style="width: 10%;">
+                        <col span="1" style="width: 10%;">
+                        <col span="1" style="width: 10%;">
+                        <col span="1" style="width: 5%;">
+                        <col span="1" style="width: 15%;">
+                        <col span="1" style="width: 15%;">
+                    </colgroup>
+
+                      <tr>
+                          <th>EB Name</th>
+                          <th>RA</th>
+                          <th>DEC</th>
+                          <th>Period</th>
+                          <th>Epoch</th>
+                          <th>mag</th>
+                          <th>Rise</th>
+                          <th>Pass</th>
+                      </tr>
+                      <tr>
+                          <td style="text-align:center">{{ star.star_name }}</td>
+                          <td style="text-align:center">{{ star.ra }}</td>
+                          <td style="text-align:center">{{ star.dec }}</td>
+                          <td style="text-align:center">{{ star.period }}</td>
+                          <td style="text-align:center">{{ star.epoch }}</td>
+                          <td style="text-align:center">{{ "%3.2f" % star.mag |float }}</td>
+                          <td style="text-align:center"> {{ star.rise(user) }} </td>
+                          <td style="text-align:center"> {{ star.pas(user) }} </td>
+                      </tr>
+                </table>
+                    <br>
+
+                    <img class="alignleft" src="{{ url_for('static', filename=graph).replace('tmp%5C', 'tmp/') }}"
+                    width="700" height="400" alt="" />
+                    <p>    Phase coverage info...</p>
+                    <ol>
+                        {% for x in star.observations %}
+                            <li style="font-family: monospace; font-size: 12px;
+                            display: inline-block;
+                            line-height:130%">
+                                {{ x.date0() }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                {{ '%0.2f' % x.phase_st()|float  }} - {{ '%0.2f' % x.phase_end()|float }} <br>
+                                {{ x.asterix() }}
+                            </li> <br>
+                        {% else %}
+                            <li>No observations yet..</li>
+                        {% endfor %}
+                    </ol>
+                    {% if user.is_admin==True %}
+{#                        <a href="{{ url_for('eb.add_obs', star_id=star.id) }}"> add_obs </a>#}
+                        <details>
+                        <summary>Add observation</summary>
+                        <div style="float: left;">
+                        <form method="Post" action="">
+                            {{ form.csrf_token }}
+                            <p style="line-height:10px; display: inline-block;"> JD for begin</p>
+                            {{ form.JD_start }}<br>
+                            <p style="line-height:10px; display: inline-block;"> JD for end&nbsp&nbsp&nbsp</p>
+                            {{ form.JD_end }}<br>
+                            {{ form.id(value=star.id, type="hidden")}} <br>
+                            {{ form.submit }}
+                        </form>
+                        </div>
+                        </details>
+                    {% endif %}
+
+                </div>
+                <br class="clearfix" />
+        {% endblock %}
