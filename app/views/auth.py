@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for
+from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FloatField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError, NumberRange
@@ -51,9 +51,6 @@ def login():
     if form.validate_on_submit():
         user = User.query.filter_by(username=form.username.data).first()
         if user:
-            print(user.username)
-            from flask import current_app, flash
-            print(current_app.config['SECRET_KEY'])
             if bcrypt.check_password_hash(user.password, form.password.data):
                 login_user(user)
                 # print(f"LOGGED IN.......{user.username}")
