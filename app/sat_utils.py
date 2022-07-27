@@ -294,12 +294,12 @@ def plot_lc_bokeh(lc_id):
     else:
         dm = max(lc.mag_err)
 
-    plot = figure(title=title, plot_height=450, plot_width=800,
+    plot = figure(title=title, plot_height=400, plot_width=800,
                   x_axis_type='datetime', min_border=10,
                   y_range=(max(lc.mag)+dm, min(lc.mag)-dm)
                   )
     plot.title.align = 'center'
-    plot.yaxis.axis_label = r"$$m^{st}$$"
+    plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
     plot.xaxis.axis_label = r"UT"
 
     if lc.mag_err is None:
@@ -325,11 +325,6 @@ def plot_lc_bokeh(lc_id):
         )
 
         ###############
-
-        # def ticker():
-        #     # a = '{:0,.0f}'.format(tick).replace(",", "X").replace(".", ",").replace("X", ".")
-        #     return ["%3.1f; %3.1f" % (alt, az) for alt, az in zip(lc.el, lc.az)]
-
         # x2 = ["%3.1f; %3.1f" % (alt, az) for alt, az in zip(lc.el, lc.az)]
         # x2 = np.array(x2)
         # plot.extra_x_ranges['sec_x_axis'] = Range1d(0, 100)
@@ -350,10 +345,7 @@ def plot_lc_bokeh(lc_id):
         # plot.add_layout(ax2, 'above')
         ##################
 
-        # r = ["%3.1f; %3.1f" % (alt, az) for alt, az in zip(lc.el, lc.az)]
-
     plot.xaxis.ticker.desired_num_ticks = 10
-
     plot.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
                                                  minutes=["%H:%M:%S"],
                                                  minsec=["%H:%M:%S"],
@@ -365,9 +357,9 @@ def plot_lc_bokeh(lc_id):
     p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
     p2.xaxis.ticker.desired_num_ticks = 10
     p2.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
-                                                 minutes=["%H:%M:%S"],
-                                                 minsec=["%H:%M:%S"],
-                                                 hours=["%H:%M:%S"])
+                                               minutes=["%H:%M:%S"],
+                                               minsec=["%H:%M:%S"],
+                                               hours=["%H:%M:%S"])
 
     p3 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
@@ -375,11 +367,9 @@ def plot_lc_bokeh(lc_id):
     p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
     p2.xaxis.ticker.desired_num_ticks = 10
     p3.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
-                                                 minutes=["%H:%M:%S"],
-                                                 minsec=["%H:%M:%S"],
-                                                 hours=["%H:%M:%S"])
-
-
+                                               minutes=["%H:%M:%S"],
+                                               minsec=["%H:%M:%S"],
+                                               hours=["%H:%M:%S"])
     layout = gridplot([[plot], [p2], [p3]])
 
     html = file_html(layout, CDN, "my plot")
@@ -394,12 +384,9 @@ def plot_lc(lc_id):
              "C": "k"}
     lc = Lightcurve.get_by_id(id=lc_id)
 
-    # plt.gcf()
-    # plt.clf()
+    plt.gcf()
+    plt.clf()
     grid = True
-
-    # import matplotlib as mpl
-    # mpl.rcParams['figure.figsize'] = (12, 6)
 
     fig, ax = plt.subplots()
     # ax.xaxis_date()
@@ -414,7 +401,6 @@ def plot_lc(lc_id):
 
     if lc.mag_err is None:
         plt.plot(lc.date_time, lc.mag, f"x{color[lc.band]}-", linewidth=0.5, fillstyle="none", markersize=3)
-        # ax.plot(lc.date_time, lc.mag, f"x{color[lc.band]}-", linewidth=0.5, fillstyle="none", markersize=3)
     else:
         plt.errorbar(lc.date_time, lc.mag, yerr=lc.mag_err, fmt=f"x{color[lc.band]}-",
                      capsize=2, linewidth=0.5, fillstyle="none",
@@ -426,8 +412,6 @@ def plot_lc(lc_id):
 
     plt.ylabel(r'$m_{st}$')
     plt.xlabel('UT')
-    # ax.set_ylabel(r'$m_{st}$')
-    # ax.set_xlabel('UT')
     ax = plt.gca()
 
     # Azimuth axis----------------------------------
@@ -463,36 +447,16 @@ def plot_lc(lc_id):
         ax.yaxis.grid()
     # ----------------------------------------------------
 
-    # if not os.path.exists(os.path.join("app", "static", "tmp_sat")):
-    #     os.mkdir(os.path.join("app", "static", "tmp_sat"))
-    # name2 = lc.sat.name + "_" + str(time.time()) + ".png"
-    # name3 = f'{os.path.join("app", "static", "tmp_sat", name2)}'
-    #
-    # for gfile in os.listdir(os.path.join("app", "static", "tmp_sat")):
-    #     # if gfile.startswith(name + '_'):  # not to remove other images
-    #     #     os.remove(os.path.join("static", "tmp", gfile))
-    #     os.remove(os.path.join("app", "static", "tmp_sat", gfile))
-    #
-    # plt.savefig(name3, bbox_inches='tight')
-    # plt.gcf()
-    # return lc, os.path.join("tmp_sat", name2)
+    if not os.path.exists(os.path.join("app", "static", "tmp_sat")):
+        os.mkdir(os.path.join("app", "static", "tmp_sat"))
+    name2 = lc.sat.name + "_" + str(time.time()) + ".png"
+    name3 = f'{os.path.join("app", "static", "tmp_sat", name2)}'
 
-    # plt.tight_layout()
-    # # plt.show()
-    # # res_fig = plt.gcf()
-    # # plt.close()
-    # # plt.gcf()
-    #
-    # # res_fig, ax = plt.subplots()
-    #
-    import mpld3
-    # # res_fig = mpld3.fig_to_html(plt.gcf())
-    # # mpld3.show()
-    #
-    # fig = plt.figure
-    # mpld3.enable_notebook()
-    res_fig = mpld3.fig_to_html(fig)
-    mpld3.save_html(fig, 'test2.html')
-    plt.close()
-    # plt.show()
-    return lc, res_fig
+    for gfile in os.listdir(os.path.join("app", "static", "tmp_sat")):
+        # if gfile.startswith(name + '_'):  # not to remove other images
+        #     os.remove(os.path.join("static", "tmp", gfile))
+        os.remove(os.path.join("app", "static", "tmp_sat", gfile))
+
+    plt.savefig(name3, bbox_inches='tight')
+    plt.gcf()
+    return lc, os.path.join("tmp_sat", name2)

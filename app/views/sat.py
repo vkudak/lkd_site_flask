@@ -123,13 +123,9 @@ def sat_details(sat_id):
 @sat_bp.route('/sat_lc_plot.html/<int:lc_id>', methods=['GET', 'POST'])
 def sat_lc_plot(lc_id):
     # lc, filename = plot_lc(lc_id)
-    # lc, fig = plot_lc(lc_id)
-    # print(fig)
-    # html_fig = fig
+    # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
 
     lc, html_fig = plot_lc_bokeh(lc_id)
-
-    # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
     return render_template("sat_lc_details.html", lc=lc, lc_graph=html_fig)
 
 
