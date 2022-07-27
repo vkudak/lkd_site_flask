@@ -1,5 +1,7 @@
 import os
 import fnmatch
+import random
+
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session, current_app, jsonify
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
@@ -9,7 +11,7 @@ from wtforms import StringField, FloatField, IntegerField, FileField, MultipleFi
 from wtforms.validators import InputRequired, Length, ValidationError, NumberRange, DataRequired
 
 from app.models import Satellite, db, Lightcurve
-from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc
+from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc, plot_lc_bokeh
 from app.star_util import plot_sat_lc, read_sat_files, plot_ccd_lc
 
 sat_bp = Blueprint('sat', __name__)
@@ -120,8 +122,15 @@ def sat_details(sat_id):
 
 @sat_bp.route('/sat_lc_plot.html/<int:lc_id>', methods=['GET', 'POST'])
 def sat_lc_plot(lc_id):
-    lc, filename = plot_lc(lc_id)
-    return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
+    # lc, filename = plot_lc(lc_id)
+    # lc, fig = plot_lc(lc_id)
+    # print(fig)
+    # html_fig = fig
+
+    lc, html_fig = plot_lc_bokeh(lc_id)
+
+    # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
+    return render_template("sat_lc_details.html", lc=lc, lc_graph=html_fig)
 
 
 @sat_bp.route("/ajaxfile_sat", methods=["POST", "GET"])

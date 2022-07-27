@@ -40,3 +40,4 @@ SQLAlchemy==1.4.31
 Werkzeug==2.0.2
 WTForms==3.0.1
 zipp==3.8.0
+bokeh~=2.4.3

@@ -4,6 +4,14 @@ import numpy as np
 from datetime import datetime, timedelta
 import time
 
+from bokeh.layouts import gridplot
+from bokeh.models import DatetimeTickFormatter
+from bokeh.plotting import figure
+from bokeh.resources import CDN
+from bokeh.embed import file_html
+from bokeh.models import ColumnDataSource, Whisker
+from bokeh.models.arrow_heads import TeeHead
+
 from dateutil import parser
 from matplotlib import pyplot as plt
 
@@ -271,6 +279,114 @@ def process_lc_files(lc_flist, db):
                         pass
 
 
+def plot_lc_bokeh(lc_id):
+    color = {"B": "blue",
+             "V": "green",
+             "R": "red",
+             "C": "black"}
+    lc = Lightcurve.get_by_id(id=lc_id)
+    dt = str(lc.dt).strip('\n')
+
+    title = f"Satellite Name:{lc.sat.name}, NORAD:{lc.sat.norad}, COSPAR:{lc.sat.cospar}" + ", " + \
+            f"LC start={lc.ut_start}  dt={dt}  Filter={lc.band}"
+    if lc.mag_err is None:
+        dm = 0.1
+    else:
+        dm = max(lc.mag_err)
+
+    plot = figure(title=title, plot_height=450, plot_width=800,
+                  x_axis_type='datetime', min_border=10,
+                  y_range=(max(lc.mag)+dm, min(lc.mag)-dm)
+                  )
+    plot.title.align = 'center'
+    plot.yaxis.axis_label = r"$$m^{st}$$"
+    plot.xaxis.axis_label = r"UT"
+
+    if lc.mag_err is None:
+        plot.line(lc.date_time, lc.mag, color=f"{color[lc.band]}", line_width=0.5)
+        plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+    else:
+        plot.line(lc.date_time, lc.mag, color=f"{color[lc.band]}", line_width=0.5)
+        plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+
+        base, lower, upper = [], [], []
+        for i in range(0, len(lc.mag)):
+            base.append(lc.date_time[i])
+            lower.append(lc.mag[i] - lc.mag_err[i])
+            upper.append(lc.mag[i] + lc.mag_err[i])
+
+        source_error = ColumnDataSource(data=dict(base=base, lower=lower, upper=upper))
+        plot.add_layout(
+            Whisker(source=source_error, base="base", upper="upper", lower="lower",
+                    line_color=f"{color[lc.band]}",
+                    upper_head=TeeHead(line_color=f"{color[lc.band]}", size=5),
+                    lower_head=TeeHead(line_color=f"{color[lc.band]}", size=5)
+                    )
+        )
+
+        ###############
+
+        # def ticker():
+        #     # a = '{:0,.0f}'.format(tick).replace(",", "X").replace(".", ",").replace("X", ".")
+        #     return ["%3.1f; %3.1f" % (alt, az) for alt, az in zip(lc.el, lc.az)]
+
+        # x2 = ["%3.1f; %3.1f" % (alt, az) for alt, az in zip(lc.el, lc.az)]
+        # x2 = np.array(x2)
+        # plot.extra_x_ranges['sec_x_axis'] = Range1d(0, 100)
+        # ax2 = LinearAxis(x_range_name="sec_x_axis", axis_label="secondary x-axis")
+        # ax2.formatter = FuncTickFormatter(args={"y": x2, "x": np.linspace(0, 100, x2.size)}, code="""
+        #      if (tick <= x[0])
+        #        return y[0].toFixed(2)
+        #      if (tick >= x[x.length - 1])
+        #        return y[x.length-1].toFixed(2)
+        #      let indexOfNumberToCompare, leftBorderIndex = 0, rightBorderIndex = x.length - 1
+        #      //Reduce searching range till it find an interval point belongs to using binary search
+        #      while (rightBorderIndex - leftBorderIndex !== 1) {
+        #        indexOfNumberToCompare = leftBorderIndex + Math.floor((rightBorderIndex - leftBorderIndex)/2)
+        #        tick >= x[indexOfNumberToCompare] ? leftBorderIndex = indexOfNumberToCompare : rightBorderIndex = indexOfNumberToCompare
+        #      }
+        #      return y[leftBorderIndex].toFixed(2)
+        #    """)
+        # plot.add_layout(ax2, 'above')
+        ##################
+
+        # r = ["%3.1f; %3.1f" % (alt, az) for alt, az in zip(lc.el, lc.az)]
+
+    plot.xaxis.ticker.desired_num_ticks = 10
+
+    plot.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                                 minutes=["%H:%M:%S"],
+                                                 minsec=["%H:%M:%S"],
+                                                 hours=["%H:%M:%S"])
+
+    p2 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
+                y_axis_location="left", x_axis_type='datetime')
+    p2.yaxis.axis_label = r"elevation [deg]"
+    p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
+    p2.xaxis.ticker.desired_num_ticks = 10
+    p2.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                                 minutes=["%H:%M:%S"],
+                                                 minsec=["%H:%M:%S"],
+                                                 hours=["%H:%M:%S"])
+
+    p3 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
+                y_axis_location="left", x_axis_type='datetime')
+    p3.yaxis.axis_label = r"Azimuth [deg]"
+    p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
+    p2.xaxis.ticker.desired_num_ticks = 10
+    p3.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                                 minutes=["%H:%M:%S"],
+                                                 minsec=["%H:%M:%S"],
+                                                 hours=["%H:%M:%S"])
+
+
+    layout = gridplot([[plot], [p2], [p3]])
+
+    html = file_html(layout, CDN, "my plot")
+    # html = file_html(plot, CDN, "my plot")
+    return lc, html
+
+
 def plot_lc(lc_id):
     color = {"B": "b",
              "V": "g",
@@ -278,29 +394,40 @@ def plot_lc(lc_id):
              "C": "k"}
     lc = Lightcurve.get_by_id(id=lc_id)
 
-    plt.gcf()
-    plt.clf()
+    # plt.gcf()
+    # plt.clf()
     grid = True
+
+    # import matplotlib as mpl
+    # mpl.rcParams['figure.figsize'] = (12, 6)
+
+    fig, ax = plt.subplots()
+    # ax.xaxis_date()
 
     # fig im MAG
     plt.rcParams['figure.figsize'] = [12, 6]
     dm = max(lc.mag) - min(lc.mag)
     dm = dm * 0.1
     plt.axis([min(lc.date_time), max(lc.date_time), max(lc.mag) + dm, min(lc.mag) - dm])
+    # ax.set_xlim([min(lc.date_time), max(lc.date_time)])
+    # ax.set_ylim([max(lc.mag) + dm, min(lc.mag) - dm])
 
     if lc.mag_err is None:
         plt.plot(lc.date_time, lc.mag, f"x{color[lc.band]}-", linewidth=0.5, fillstyle="none", markersize=3)
+        # ax.plot(lc.date_time, lc.mag, f"x{color[lc.band]}-", linewidth=0.5, fillstyle="none", markersize=3)
     else:
         plt.errorbar(lc.date_time, lc.mag, yerr=lc.mag_err, fmt=f"x{color[lc.band]}-",
                      capsize=2, linewidth=0.5, fillstyle="none",
                      markersize=3, ecolor="k")
-
+    # plt
     plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n LC start=%s  dt=%s  Filter=%s" % (
         lc.sat.name, lc.sat.norad, lc.sat.cospar, lc.ut_start, str(lc.dt).strip("\n"), lc.band),
               pad=6, fontsize=12)
 
     plt.ylabel(r'$m_{st}$')
     plt.xlabel('UT')
+    # ax.set_ylabel(r'$m_{st}$')
+    # ax.set_xlabel('UT')
     ax = plt.gca()
 
     # Azimuth axis----------------------------------
@@ -336,16 +463,36 @@ def plot_lc(lc_id):
         ax.yaxis.grid()
     # ----------------------------------------------------
 
-    if not os.path.exists(os.path.join("app", "static", "tmp_sat")):
-        os.mkdir(os.path.join("app", "static", "tmp_sat"))
-    name2 = lc.sat.name + "_" + str(time.time()) + ".png"
-    name3 = f'{os.path.join("app", "static", "tmp_sat", name2)}'
+    # if not os.path.exists(os.path.join("app", "static", "tmp_sat")):
+    #     os.mkdir(os.path.join("app", "static", "tmp_sat"))
+    # name2 = lc.sat.name + "_" + str(time.time()) + ".png"
+    # name3 = f'{os.path.join("app", "static", "tmp_sat", name2)}'
+    #
+    # for gfile in os.listdir(os.path.join("app", "static", "tmp_sat")):
+    #     # if gfile.startswith(name + '_'):  # not to remove other images
+    #     #     os.remove(os.path.join("static", "tmp", gfile))
+    #     os.remove(os.path.join("app", "static", "tmp_sat", gfile))
+    #
+    # plt.savefig(name3, bbox_inches='tight')
+    # plt.gcf()
+    # return lc, os.path.join("tmp_sat", name2)
 
-    for gfile in os.listdir(os.path.join("app", "static", "tmp_sat")):
-        # if gfile.startswith(name + '_'):  # not to remove other images
-        #     os.remove(os.path.join("static", "tmp", gfile))
-        os.remove(os.path.join("app", "static", "tmp_sat", gfile))
-
-    plt.savefig(name3, bbox_inches='tight')
-    plt.gcf()
-    return lc, os.path.join("tmp_sat", name2)
+    # plt.tight_layout()
+    # # plt.show()
+    # # res_fig = plt.gcf()
+    # # plt.close()
+    # # plt.gcf()
+    #
+    # # res_fig, ax = plt.subplots()
+    #
+    import mpld3
+    # # res_fig = mpld3.fig_to_html(plt.gcf())
+    # # mpld3.show()
+    #
+    # fig = plt.figure
+    # mpld3.enable_notebook()
+    res_fig = mpld3.fig_to_html(fig)
+    mpld3.save_html(fig, 'test2.html')
+    plt.close()
+    # plt.show()
+    return lc, res_fig
