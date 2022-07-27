@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import time
 
 from bokeh.layouts import gridplot
-from bokeh.models import DatetimeTickFormatter
+from bokeh.models import DatetimeTickFormatter, BoxSelectTool
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from bokeh.embed import file_html
@@ -296,7 +296,7 @@ def plot_lc_bokeh(lc_id):
 
     plot = figure(title=title, plot_height=400, plot_width=800,
                   x_axis_type='datetime', min_border=10,
-                  y_range=(max(lc.mag)+dm, min(lc.mag)-dm)
+                  y_range=(max(lc.mag)+dm, min(lc.mag)-dm),
                   )
     plot.title.align = 'center'
     plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
@@ -365,12 +365,12 @@ def plot_lc_bokeh(lc_id):
                 y_axis_location="left", x_axis_type='datetime')
     p3.yaxis.axis_label = r"Azimuth [deg]"
     p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
-    p2.xaxis.ticker.desired_num_ticks = 10
+    p3.xaxis.ticker.desired_num_ticks = 10
     p3.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
                                                minutes=["%H:%M:%S"],
                                                minsec=["%H:%M:%S"],
                                                hours=["%H:%M:%S"])
-    layout = gridplot([[plot], [p2], [p3]])
+    layout = gridplot([[plot], [p2], [p3]], toolbar_options=dict(logo=None))
 
     html = file_html(layout, CDN, "my plot")
     # html = file_html(plot, CDN, "my plot")
