@@ -254,7 +254,7 @@ def process_lc_files(lc_flist, db):
                             lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
                                                 dtype={'names': ('time',), 'formats': ('S14',)})
                             lctime = [
-                                datetime.strptime(sat_st_date + " " + x[0], "%Y-%m-%d %H:%M:%S.%f")
+                                datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
                                 for x in lctime]
                             t0 = lctime[0]
                             lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
@@ -298,6 +298,7 @@ def plot_lc_bokeh(lc_id):
                   x_axis_type='datetime', min_border=10,
                   y_range=(max(lc.mag)+dm, min(lc.mag)-dm),
                   )
+    plot.output_backend = "svg"
     plot.title.align = 'center'
     plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
     plot.xaxis.axis_label = r"UT"
@@ -353,6 +354,7 @@ def plot_lc_bokeh(lc_id):
 
     p2 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
+    p2.output_backend = "svg"
     p2.yaxis.axis_label = r"elevation [deg]"
     p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
     p2.xaxis.ticker.desired_num_ticks = 10
@@ -363,6 +365,7 @@ def plot_lc_bokeh(lc_id):
 
     p3 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
+    p3.output_backend = "svg"
     p3.yaxis.axis_label = r"Azimuth [deg]"
     p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
     p3.xaxis.ticker.desired_num_ticks = 10

@@ -1,9 +1,11 @@
+import datetime
 import os
 import fnmatch
 import random
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, session, current_app, jsonify
 from flask_login import login_required, current_user
+from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, IntegerField, FileField, MultipleFileField, SubmitField, RadioField, \
@@ -192,16 +194,24 @@ def ajax_file_sat():
             #     sats, _ = Satellite.search_sat(search_string=like_string, start=row, stop=row + rowperpage)
 
             data = []
-            for sat in sats:
-                txt = url_for('sat.sat_details', sat_id=sat.id)
-                link = "https://www.n2yo.com/satellite/?s=" + str(sat.norad)
-                data.append({
-                    'norad': '<a href=' + txt + '>' + str(sat.norad) + '</a>',
-                    'cospar': sat.cospar,
-                    'name': sat.name,
-                    'LC': len(sat.get_lcs()),
-                    'n2yo': '<a href=' + link + '> link </a>',
-                })
+            # for sat in sats:
+            #     txt = url_for('sat.sat_details', sat_id=sat.id)
+            #     link = "https://www.n2yo.com/satellite/?s=" + str(sat.norad)
+            #     data.append({
+            #         'norad': '<a href=' + txt + '>' + str(sat.norad) + '</a>',
+            #         'cospar': sat.cospar,
+            #         'name': sat.name,
+            #         'LC': len(sat.get_lcs()),
+            #         'n2yo': '<a href=' + link + '> link </a>',
+            #     })
+
+            data = [{
+                'norad': '<a href=' + url_for('sat.sat_details', sat_id=sat.id) + '>' + str(sat.norad) + '</a>',
+                'cospar': sat.cospar,
+                'name': sat.name,
+                'LC': sat.count_lcs(),
+                'n2yo': '<a href=' + "https://www.n2yo.com/satellite/?s=" + str(sat.norad) + '> link </a>',
+            } for sat in sats]
 
             response = {
                 'draw': draw,
@@ -244,6 +254,8 @@ def ajax_file_lc(sat_id):
                 col_name = request.form.get(f'columns[{col_index}][data]')
                 if col_name not in ['ut_start', 'filter']:
                     col_name = 'ut_start'
+                if col_name == "filter":
+                    col_name = "band"
                 descending = request.form.get(f'order[{i}][dir]') == 'desc'
                 col = getattr(Lightcurve, col_name)
                 if descending:
@@ -272,7 +284,8 @@ def ajax_file_lc(sat_id):
             response = {
                 'draw': draw,
                 # 'iTotalRecords': totalRecords,
-                'iTotalRecords': Lightcurve.query.count(),
+                # 'iTotalRecords': Lightcurve.query.count(),
+                'iTotalRecords': Lightcurve.query.filter(Lightcurve.sat_id == sat_id).count(),
                 'iTotalDisplayRecords': total_filtered,
                 'aaData': data,
             }

@@ -223,6 +223,10 @@ class Satellite(db.Model):
         lcs = db.session.query(Lightcurve).filter(Lightcurve.sat.has(norad=self.norad)).all()
         return lcs
 
+    def count_lcs(self):
+        n = db.session.query(Lightcurve).filter(Lightcurve.sat.has(norad=self.norad)).count()
+        return n
+
 
 class Lightcurve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
