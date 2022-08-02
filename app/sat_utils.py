@@ -300,7 +300,9 @@ def plot_lc_bokeh(lc_id):
                   )
     plot.output_backend = "svg"
     plot.title.align = 'center'
-    plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
+    # plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
+    # https://www.geeksforgeeks.org/how-to-print-superscript-and-subscript-in-python/
+    plot.yaxis.axis_label = u'm\u209B\u209c [mag]'  # m_st
     plot.xaxis.axis_label = r"UT"
 
     if lc.mag_err is None:
