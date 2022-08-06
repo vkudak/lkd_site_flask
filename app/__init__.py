@@ -37,7 +37,7 @@ def create_app():
     app.config.update(
         SQLALCHEMY_DATABASE_URI=uri  # app.config["DATABASE_URI"]
     )
-    app.config['UPLOAD_FOLDER'] = "upload/lcs"
+    # app.config['UPLOAD_FOLDER'] = "upload/lcs"
     app.config['MAX_CONTENT_PATH'] = 5 * 1024 * 1024  # 5 Mb
     app.config['UPLOAD_EXTENSIONS'] = ['.phc', '.ph']
 
@@ -71,4 +71,3 @@ def create_app():
 
     Session(app)
     return app
-

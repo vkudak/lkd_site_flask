@@ -13,7 +13,8 @@ from wtforms import StringField, FloatField, IntegerField, FileField, MultipleFi
 from wtforms.validators import InputRequired, Length, ValidationError, NumberRange, DataRequired
 
 from app.models import Satellite, db, Lightcurve
-from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc, plot_lc_bokeh
+from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc, plot_lc_bokeh, \
+    process_lc_file
 from app.star_util import plot_sat_lc, read_sat_files, plot_ccd_lc
 
 sat_bp = Blueprint('sat', __name__)
@@ -55,17 +56,20 @@ def sat_phot():
                 if len(file_ext) > 2:
                     file_ext = file_ext[:3]
                 if file_ext in current_app.config['UPLOAD_EXTENSIONS']:
-                    # print("Saved.....")
-                    file.save(
-                        os.path.join("app", current_app.config['UPLOAD_FOLDER'], file.filename)
-                    )
+                    # print(file)
+                    _, fext = os.path.splitext(file.filename)
+                    process_lc_file(file_content=file.read(), file_ext=fext, db=db)
+                    # # print("Saved.....")
+                    # file.save(
+                    #     os.path.join("app", current_app.config['UPLOAD_FOLDER'], file.filename)
+                    # )
                 else:
                     print("wrong file ext", file.filename)
 
-            lc_files_list = get_list_of_files(os.path.join("app", current_app.config['UPLOAD_FOLDER']))
+            # lc_files_list = get_list_of_files(os.path.join("app", current_app.config['UPLOAD_FOLDER']))
             # print("process...")
-            process_lc_files(lc_flist=lc_files_list, db=db)
-            del_files_in_folder(folder=os.path.join("app", current_app.config['UPLOAD_FOLDER']))
+            # process_lc_files(lc_flist=lc_files_list, db=db)
+            # del_files_in_folder(folder=os.path.join("app", current_app.config['UPLOAD_FOLDER']))
             # print("Delete.")
             return redirect(url_for("sat.sat_phot"))
 

@@ -1,3 +1,4 @@
+import io
 import os
 import shutil
 import numpy as np
@@ -123,6 +124,159 @@ def add_lc(db, sat_id, band,
             db.session.add(lc)
             db.session.commit()
             # print(f"commit with {band} and {lc_st}")
+
+
+def process_lc_file(file_content, file_ext, db):
+    file = file_content
+    fext = file_ext
+    # fs = io.StringIO(file.decode("UTF-8"))
+    if fext == ".phc":
+        with io.StringIO(file.decode("UTF-8")) as fs:
+            sat_st = fs.readline().strip("\n").strip("\r")
+            sat_st_date = sat_st.split()[0]
+            sat_end = fs.readline().strip("\n").strip("\r")
+            for line in fs:
+                # line = line.decode("UTF-8")
+                if line[:9] == "COSPAR ID":
+                    cospar = line.split("=")[1].strip().strip("\n").strip("\r")
+                if line[:8] == "NORAD ID":
+                    norad = int(line.split("=")[1].strip())
+                if line[:4] == "NAME":
+                    name = line.split("=")[1].strip().strip("\n").strip("\r")
+                if line[:2] == "dt":
+                    dt = line.split("=")[1].strip().strip("\n").strip("\r")
+            fs.seek(0)
+            try:
+                impB, impV, fonB, fonV, mB, mV, az, el, rg = \
+                    np.loadtxt(fs, unpack=True, skiprows=7,
+                               usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9)
+                               )
+                fs.seek(0)
+                lctime = np.loadtxt(fs, unpack=True, skiprows=7, usecols=(0,),
+                                    dtype={'names': ('time',), 'formats': ('S15',)})
+
+                lctime = [
+                    datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
+                    for x in lctime]
+                t0 = lctime[0]
+                lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
+                          lctime]  # add DAY after 00:00:00
+
+                sat = Satellite.get_by_norad(norad=norad)
+
+                if sat is None:
+                    sat = Satellite(name=name, norad=norad, cospar=cospar)  # add satellite
+                    db.session.add(sat)
+                    db.session.commit()
+
+                # print(f"Add LC. file = {file}")
+
+                add_lc(db=db, sat_id=sat.id, band="B",
+                       lc_st=sat_st, lc_end=sat_end,
+                       dt=dt, lctime=lctime,
+                       flux=impB, mag=mB,
+                       az=az, el=el, rg=rg)
+
+                add_lc(db=db, sat_id=sat.id, band="V",
+                       lc_st=sat_st, lc_end=sat_end,
+                       dt=dt, lctime=lctime,
+                       flux=impV, mag=mV,
+                       az=az, el=el, rg=rg)
+
+            except Exception as e:
+                print(e)
+                print("bed format PHC in file =", file)
+                pass
+
+    elif fext[:3] == ".ph":  # .ph R B V C and others!
+        with io.StringIO(file.decode("UTF-8")) as fs:
+            fs.readline()
+            # fs.readline()
+            # fs.readline()
+            # fs.readline()
+            tle = fs.readline()[2:] + fs.readline()[2:] + fs.readline()[2:]
+
+            sat_st = fs.readline().strip("\n").strip("\r")[2:].strip()[:-1]
+            sat_st_date = sat_st.split()[0]
+
+            sat_end = fs.readline().strip("\n").strip("\r")[2:].strip()[:-1]
+
+            for line in fs:
+                l = line.split(" = ")
+                if l[0] == "# COSPAR":
+                    cospar = l[1].strip("\n").strip("\r")
+                if l[0] == "# NORAD ":
+                    norad = int(l[1])
+                if l[0] == "# NAME  ":
+                    name = l[1].strip("\n").strip("\r")
+                if l[0] == "# dt":
+                    dt = l[1].strip("\n").strip("\r")
+            fs.seek(0)
+            # read TLE
+            try:  # ##################################
+                flux, flux_err, m, merr, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
+                                                                 usecols=(6, 7, 8, 9, 10, 11, 12))
+                fs.seek(0)
+                lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
+                                    dtype={'names': ('time',), 'formats': ('S14',)})
+                lctime = [
+                    datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
+                    for x in lctime]
+                t0 = lctime[0]
+                lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
+                          lctime]  # add DAY after 00:00:00
+
+                sat = Satellite.get_by_norad(norad=norad)
+                if not sat:  # sat == []
+                    sat = Satellite(name=name, norad=norad, cospar=cospar)  # add satellite
+                    db.session.add(sat)
+                    db.session.commit()
+                    sat = Satellite.get_by_norad(norad=norad)
+
+                add_lc(db=db, sat_id=sat.id, band=fext[3:],
+                       lc_st=sat_st, lc_end=sat_end,
+                       dt=dt, tle=tle, lctime=lctime,
+                       flux=flux, flux_err=flux_err,
+                       mag=m, mag_err=merr,
+                       az=az, el=el, rg=rg)
+
+            except Exception as e:
+                # if str(e) == "list index out of range":   # no merr
+                # print(e.__class__.__name__)
+                # print(type(e.__class__.__name__))
+                # print(e.__class__ is IndexError)
+                if e.__class__ is IndexError:  # no merr
+                    # print("No m_err")
+                    fs.seek(0)
+                    flux, flux_err, m, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
+                                                               usecols=(5, 6, 7, 8, 9, 10))
+                    fs.seek(0)
+                    lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
+                                        dtype={'names': ('time',), 'formats': ('S14',)})
+                    lctime = [
+                        datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
+                        for x in lctime]
+                    t0 = lctime[0]
+                    lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
+                              lctime]  # add DAY after 00:00:00
+
+                    sat = Satellite.get_by_norad(norad=norad)
+                    if sat is None:
+                        sat = Satellite(name=name, norad=norad, cospar=cospar)  # add satellite
+                        db.session.add(sat)
+                        db.session.commit()
+
+                    add_lc(db=db, sat_id=sat.id, band=fext[3:],
+                           lc_st=sat_st, lc_end=sat_end,
+                           dt=dt, tle=tle, lctime=lctime,
+                           flux=flux, flux_err=flux_err,
+                           mag=m, mag_err=None,
+                           az=az, el=el, rg=rg)
+                else:
+                    # print(e.__class__.__name__)
+                    print("Error = ", e, e.__class__.__name__)
+                    print("Bed format PHR in file =", file)
+                pass
 
 
 def process_lc_files(lc_flist, db):
