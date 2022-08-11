@@ -473,7 +473,8 @@ def plot_lc_bokeh(lc_id):
     dt = str(lc.dt).strip('\n')
 
     title = f"Satellite Name:{lc.sat.name}, NORAD:{lc.sat.norad}, COSPAR:{lc.sat.cospar}" + ", " + \
-            f"LC start={lc.ut_start}  dt={dt}  Filter={lc.band}"
+            "\n" + \
+            f"LC start={lc.ut_start}  dt={dt}  Filter={lc.band} Observatory={lc.site}"
     if lc.mag_err is None:
         dm = 0.1
     else:

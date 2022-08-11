@@ -4,7 +4,8 @@
                     <br>
                     <h2>Details of Satellite
                         <br>NORAD={{lc.sat.norad}}, COSPAR={{lc.sat.cospar }}, NAME={{lc.sat.name }}
-                        <br>LC start time = {{lc.ut_start }}
+                        <br>LC start time = {{lc.ut_start }},
+                        <br>Filter={{ lc.band }}, dt={{ lc.dt }}, Observatory={{ lc.site }}
                     </h2>
 
                     <script type="text/javascript" src="{{url_for('static', filename='js/d3.v5.js')}}"></script>
