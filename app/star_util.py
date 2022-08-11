@@ -153,7 +153,6 @@ def read_stars(filename, gcvs_filename, user):
             stars.append(row)
     # stars is list of dict [{.star_rec with keys..},{...}, {...}]
 
-    # todo How to sort stars ?????
     stars = sorted(stars, key=lambda k: (float(k['Mag']), k["sort_date"]))
     # return sorted(stars, key=lambda k: k['Mag'])
     return stars
@@ -225,7 +224,6 @@ def read_stars_json(filename, gcvs_filename, user):
             stars.append(row)
     # stars is list of dict [{.star_rec with keys..},{...}, {...}]
 
-    # todo How to sort stars ?????
     stars = sorted(stars, key=lambda k: (float(k['Mag']), k["sort_date"]))
     stars = sorted(stars, key=lambda k: (k["Phase"] != ""), reverse=True)
     stars = sorted(stars, key=lambda k: (k["Done"]))  # Done are last ones
@@ -285,7 +283,6 @@ def read_stars_from_db(user, db_stars):
         stars.append(row)
     # stars is list of dict [{.star_rec with keys..},{...}, {...}]
 
-    # todo How to sort stars ?????
     stars = sorted(stars, key=lambda k: (float(k['Mag']), k["sort_date"]))
     stars = sorted(stars, key=lambda k: (k["Phase"] != ""), reverse=True)
     stars = sorted(stars, key=lambda k: (k["Done"]))  # Done are last ones

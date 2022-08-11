@@ -54,7 +54,6 @@ class Star(db.Model):
     @classmethod
     def delete_by_id(cls, id):
         star = db.session.query(cls).filter_by(id=id).first()
-        # TODO delete also observations ??? or delete orfans will work ?
         db.session.delete(star)
         db.session.commit()
 
@@ -253,6 +252,9 @@ class Lightcurve(db.Model):
     az = db.Column(db.PickleType, nullable=True)
     el = db.Column(db.PickleType, nullable=True)
     rg = db.Column(db.PickleType, nullable=True)
+
+    site = db.Column(db.String(50), nullable=True)
+    lsp_period = db.Column(db.Float, nullable=True)
 
     @classmethod
     def get_by_lc_start(cls, norad, ut_start, bands=False):

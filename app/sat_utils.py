@@ -49,10 +49,30 @@ def get_list_of_files(dirName):
     return allFiles
 
 
+def calc_lc_lsp(lctime, flux, mag):
+    """
+    Calculate LSP periodogram and return most probable period value
+    or None if LC is aperiodic
+    Args:
+        lctime: datetime array
+        flux: flux array
+        mag: mag array
+
+    Returns:
+        most probable period
+        or None if LC is aperiodic
+    """
+    # TODO: write lsp func
+    pass
+    # return period
+
+
 def add_lc(db, sat_id, band,
            lc_st, lc_end, dt, lctime,
            flux, mag,
-           az, el, rg, flux_err=None, mag_err=None, tle=None):
+           site,
+           az, el, rg, flux_err=None, mag_err=None,
+           tle=None):
     # check if we already have such LC
     sat = Satellite.get_by_id(id=sat_id)
     # print("     Start processing...")
@@ -63,6 +83,7 @@ def add_lc(db, sat_id, band,
         return None
     else:
         # we have all data
+        lsp = calc_lc_lsp(lctime, flux, mag)
 
         # we have "flux_err" and "mag_err"
         if flux_err is not None and mag_err is not None:
@@ -73,7 +94,8 @@ def add_lc(db, sat_id, band,
                             date_time=lctime,
                             flux=flux, flux_err=flux_err,
                             mag=mag, mag_err=mag_err,
-                            az=az, el=el, rg=rg)
+                            az=az, el=el, rg=rg,
+                            site=site, lsp=lsp)
             if tle is not None:
                 lc.tle = tle
             db.session.add(lc)
@@ -88,7 +110,8 @@ def add_lc(db, sat_id, band,
                             date_time=lctime,
                             flux=flux, flux_err=flux_err,
                             mag=mag, mag_err=None,
-                            az=az, el=el, rg=rg)
+                            az=az, el=el, rg=rg,
+                            site=site, lsp=lsp)
             if tle is not None:
                 lc.tle = tle
             db.session.add(lc)
@@ -103,7 +126,8 @@ def add_lc(db, sat_id, band,
                             date_time=lctime,
                             flux=flux, flux_err=None,
                             mag=mag, mag_err=mag_err,
-                            az=az, el=el, rg=rg)
+                            az=az, el=el, rg=rg,
+                            site=site, lsp=lsp)
             if tle is not None:
                 lc.tle = tle
             db.session.add(lc)
@@ -118,7 +142,8 @@ def add_lc(db, sat_id, band,
                             date_time=lctime,
                             flux=flux, flux_err=None,
                             mag=mag, mag_err=None,
-                            az=az, el=el, rg=rg)
+                            az=az, el=el, rg=rg,
+                            site=site, lsp=lsp)
             if tle is not None:
                 lc.tle = tle
             db.session.add(lc)
@@ -175,13 +200,15 @@ def process_lc_file(file_content, file_ext, db):
                        lc_st=sat_st, lc_end=sat_end,
                        dt=dt, lctime=lctime,
                        flux=impB, mag=mB,
-                       az=az, el=el, rg=rg)
+                       az=az, el=el, rg=rg,
+                       site="Uzhhorod")
 
                 add_lc(db=db, sat_id=sat.id, band="V",
                        lc_st=sat_st, lc_end=sat_end,
                        dt=dt, lctime=lctime,
                        flux=impV, mag=mV,
-                       az=az, el=el, rg=rg)
+                       az=az, el=el, rg=rg,
+                       site="Uzhhorod")
 
             except Exception as e:
                 print(e)
@@ -211,6 +238,8 @@ def process_lc_file(file_content, file_ext, db):
                     name = l[1].strip("\n").strip("\r")
                 if l[0] == "# dt":
                     dt = l[1].strip("\n").strip("\r")
+                if l[0] == "# SITE_NAME   ":
+                    site_name = l[1].strip("\n").strip("\r")
             fs.seek(0)
             # read TLE
             try:  # ##################################
@@ -238,7 +267,8 @@ def process_lc_file(file_content, file_ext, db):
                        dt=dt, tle=tle, lctime=lctime,
                        flux=flux, flux_err=flux_err,
                        mag=m, mag_err=merr,
-                       az=az, el=el, rg=rg)
+                       az=az, el=el, rg=rg,
+                       site=site_name)
 
             except Exception as e:
                 # if str(e) == "list index out of range":   # no merr
@@ -271,7 +301,8 @@ def process_lc_file(file_content, file_ext, db):
                            dt=dt, tle=tle, lctime=lctime,
                            flux=flux, flux_err=flux_err,
                            mag=m, mag_err=None,
-                           az=az, el=el, rg=rg)
+                           az=az, el=el, rg=rg,
+                           site=site_name)
                 else:
                     # print(e.__class__.__name__)
                     print("Error = ", e, e.__class__.__name__)
