@@ -403,7 +403,7 @@ def process_lc_files(lc_flist, db):
                     # read TLE
                     try:  # ##################################
                         flux, flux_err, m, merr, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
-                                                         usecols=(6, 7, 8, 9, 10, 11, 12))
+                                                                         usecols=(6, 7, 8, 9, 10, 11, 12))
                         fs.seek(0)
                         lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
                                             dtype={'names': ('time',), 'formats': ('S14',)})
@@ -488,7 +488,7 @@ def plot_lc_bokeh(lc_id):
 
     plot = figure(title=title, plot_height=400, plot_width=800,
                   x_axis_type='datetime', min_border=10,
-                  y_range=(max(lc.mag)+dm, min(lc.mag)-dm),
+                  y_range=(max(lc.mag) + dm, min(lc.mag) - dm),
                   tools=TOOLS
                   )
 
@@ -596,7 +596,7 @@ def plot_lc_bokeh(lc_id):
     return lc, html
 
 
-def lsp_cals(lc_id):
+def lsp_calc(lc_id):
     lc = Lightcurve.get_by_id(id=lc_id)
     lctime = lc.date_time
     lctime = [x.timestamp() for x in lctime]
@@ -643,11 +643,11 @@ def lsp_plot_bokeh(lc_id):
         ls = LombScargle(lctime, lc.mag - lc.mag.mean())
 
     frequency, power = ls.autopower(
-                                    # nyquist_factor=0.5,
-                                    minimum_frequency=min_freq,
-                                    maximum_frequency=max_freq,
-                                    samples_per_peak=30,
-                                    normalization='standard')
+        # nyquist_factor=0.5,
+        minimum_frequency=min_freq,
+        maximum_frequency=max_freq,
+        samples_per_peak=30,
+        normalization='standard')
 
     periods = 1.0 / frequency
 
