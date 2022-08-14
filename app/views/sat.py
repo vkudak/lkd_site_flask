@@ -14,7 +14,7 @@ from wtforms.validators import InputRequired, Length, ValidationError, NumberRan
 
 from app.models import Satellite, db, Lightcurve
 from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc, plot_lc_bokeh, \
-    process_lc_file, lsp_plot_bokeh
+    process_lc_file, lsp_plot_bokeh, lsp_calc, calc_period_for_all_lc
 from app.star_util import plot_sat_lc, read_sat_files, plot_ccd_lc
 
 sat_bp = Blueprint('sat', __name__)
@@ -38,6 +38,9 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 @sat_bp.route('/sat_phot.html', methods=['GET', 'POST'])
 @login_required
 def sat_phot():
+    # Uncomment to recalc ALL LCs period  (long story)
+    # calc_period_for_all_lc()
+
     if current_user.sat_access:
         lc_form = AddLcForm()
         # search_form = SearchForm()
@@ -134,6 +137,12 @@ def sat_lc_plot(lc_id):
     lc, lc_fig = plot_lc_bokeh(lc_id)
     lsp_fig = lsp_plot_bokeh(lc_id)
     return render_template("sat_lc_details.html", lc=lc, lc_graph=lc_fig, lsp_graph=lsp_fig)
+
+
+@sat_bp.route('/sat_lc_period_plot.html/<int:lc_id>', methods=['GET', 'POST'])
+def sat_lc_period_plot(lc_id):
+    lsp_fig, lc = lsp_plot_bokeh(lc_id, return_lc=True)
+    return render_template("sat_lc_lsp_details.html", lc=lc, lsp_graph=lsp_fig)
 
 
 @sat_bp.route("/ajaxfile_sat", methods=["POST", "GET"])
@@ -280,10 +289,18 @@ def ajax_file_lc(sat_id):
             data = []
             for lc in lcs:
                 txt = url_for('sat.sat_lc_plot', lc_id=lc.id)
+                txt_lsp = url_for('sat.sat_lc_period_plot', lc_id=lc.id)
+                if lc.lsp_period is None:
+                    period = "Aperiodic"
+                else:
+                    period = lc.lsp_period
+
                 data.append({
                     'ut_start': lc.ut_start.strftime("%Y-%m-%d %H:%M:%S"),
                     'filter': lc.band,
-                    'details': '<a href=' + txt + '>' + "LC plot" + '</a>'
+                    'curve': '<a href=' + txt + '>' + "LC" + '</a>',
+                    'period': period,
+                    'lsp': '<a href=' + txt_lsp + '>' + "LSP" + '</a>'
                 })
 
             response = {

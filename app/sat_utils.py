@@ -52,24 +52,6 @@ def get_list_of_files(dirName):
     return allFiles
 
 
-def calc_lc_lsp(lctime, flux, mag):
-    """
-    Calculate LSP periodogram and return most probable period value
-    or None if LC is aperiodic
-    Args:
-        lctime: datetime array
-        flux: flux array
-        mag: mag array
-
-    Returns:
-        most probable period
-        or None if LC is aperiodic
-    """
-    # TODO: write lsp func
-    pass
-    # return period
-
-
 def add_lc(db, sat_id, band,
            lc_st, lc_end, dt, lctime,
            flux, mag,
@@ -83,10 +65,9 @@ def add_lc(db, sat_id, band,
     lcs, bands = Lightcurve.get_by_lc_start(norad=sat.norad, ut_start=lc_st, bands=True)
 
     if band in bands:
+        # if we already have LC with same ut_start and Band return None
         return None
     else:
-        # we have all data
-        lsp = calc_lc_lsp(lctime, flux, mag)
 
         # we have "flux_err" and "mag_err"
         if flux_err is not None and mag_err is not None:
@@ -98,9 +79,11 @@ def add_lc(db, sat_id, band,
                             flux=flux, flux_err=flux_err,
                             mag=mag, mag_err=mag_err,
                             az=az, el=el, rg=rg,
-                            site=site, lsp=lsp)
+                            site=site)
             if tle is not None:
                 lc.tle = tle
+
+            lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
             db.session.commit()
 
@@ -114,9 +97,10 @@ def add_lc(db, sat_id, band,
                             flux=flux, flux_err=flux_err,
                             mag=mag, mag_err=None,
                             az=az, el=el, rg=rg,
-                            site=site, lsp=lsp)
+                            site=site)
             if tle is not None:
                 lc.tle = tle
+            lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
             db.session.commit()
 
@@ -130,9 +114,10 @@ def add_lc(db, sat_id, band,
                             flux=flux, flux_err=None,
                             mag=mag, mag_err=mag_err,
                             az=az, el=el, rg=rg,
-                            site=site, lsp=lsp)
+                            site=site)
             if tle is not None:
                 lc.tle = tle
+            lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
             db.session.commit()
 
@@ -146,9 +131,10 @@ def add_lc(db, sat_id, band,
                             flux=flux, flux_err=None,
                             mag=mag, mag_err=None,
                             az=az, el=el, rg=rg,
-                            site=site, lsp=lsp)
+                            site=site)
             if tle is not None:
                 lc.tle = tle
+            lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
             db.session.commit()
             # print(f"commit with {band} and {lc_st}")
@@ -596,9 +582,18 @@ def plot_lc_bokeh(lc_id):
     return lc, html
 
 
-def lsp_calc(lc_id):
-    lc = Lightcurve.get_by_id(id=lc_id)
+def lsp_calc(lc_id=None, lc=None):
+    """
+    Args:
+        lc_id: id of LC (option #1 preferred)
+        lc: Lightcurve object (option #2)
+
+    Returns: None if Aperiodic or Period with the highest Power
+    """
+    if lc_id:
+        lc = Lightcurve.get_by_id(id=lc_id)
     lctime = lc.date_time
+
     lctime = [x.timestamp() for x in lctime]
 
     max_freq = 1 / (2 * lc.dt)
@@ -618,18 +613,27 @@ def lsp_calc(lc_id):
 
     periods = 1.0 / frequency
 
-    probabilities = [0.0001]
+    probabilities = [0.0001]  # 0.01 %
     fap = ls.false_alarm_level(probabilities)
     peaks, _ = find_peaks(power, height=fap[0])
 
-    zipped_lists = zip(power[peaks], periods[peaks])
-    sorted_pairs = sorted(zipped_lists, reverse=True)
+    if not peaks:
+        return None
+    else:
+        zipped_lists = zip(power[peaks], periods[peaks])
+        sorted_pairs = sorted(zipped_lists, reverse=True)
 
-    # TODO: ckeck results
-    return sorted_pairs[0]
+        # Return period with higher power
+        return sorted_pairs[0][0]
 
 
-def lsp_plot_bokeh(lc_id):
+def lsp_plot_bokeh(lc_id, return_lc=False):
+    """
+    Args:
+        lc_id: id of LC
+
+    Returns: Bokeh html plot of LSP Periodogram
+    """
     lc = Lightcurve.get_by_id(id=lc_id)
     lctime = lc.date_time
     lctime = [x.timestamp() for x in lctime]
@@ -691,6 +695,8 @@ def lsp_plot_bokeh(lc_id):
     plot.add_glyph(source, glyph)
 
     lsp_html = file_html(plot, CDN, "my plot")
+    if return_lc:
+        return lsp_html, lc
     return lsp_html
 
 
@@ -777,3 +783,10 @@ def plot_lc(lc_id):
     plt.savefig(name3, bbox_inches='tight')
     plt.gcf()
     return lc, os.path.join("tmp_sat", name2)
+
+
+def calc_period_for_all_lc():
+    lcs = Lightcurve.get_all()
+    for lc in lcs:
+        # print(lc.id)
+        lc.calc_period()

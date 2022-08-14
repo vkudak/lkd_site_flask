@@ -13,15 +13,10 @@
 
 {#                    <img class="aligncenter" src="{{ url_for('static', filename=lc_graph).replace('tmp_sat%5C', 'tmp_sat/') }}"#}
 {#                    width="800" height="500" alt="" />#}
+
                     <div style="width:800px; margin-right: auto; margin-left: auto; border-collapse: collapse;">
-                        {{ lc_graph | safe}}
+                        {{ lsp_graph | safe}}
                     </div>
-
-                    <br>
-
-{#                    <div style="width:800px; margin-right: auto; margin-left: auto; border-collapse: collapse;">#}
-{#                        {{ lsp_graph | safe}}#}
-{#                    </div>#}
 
                 </div>
                 <br class="clearfix" />

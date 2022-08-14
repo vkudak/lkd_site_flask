@@ -3,6 +3,8 @@ from flask_login import UserMixin
 
 from datetime import datetime, timedelta, timezone
 import ephem
+from scipy.signal import find_peaks
+from astropy.timeseries import LombScargle
 
 from app.star_util import t2phases, phase2str
 
@@ -277,3 +279,46 @@ class Lightcurve(db.Model):
         lc = db.session.query(cls).filter_by(id=id).first()
         return lc
 
+    @classmethod
+    def get_all(cls):
+        """
+        Return all Lightcurves
+        """
+        return db.session.query(cls).order_by(cls.id).all()
+
+    def calc_period(self):
+        lctime = self.date_time
+
+        lctime = [x.timestamp() for x in lctime]
+
+        max_freq = 1 / (2 * self.dt)
+        min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
+
+        if self.mag_err is not None:
+            ls = LombScargle(lctime, self.mag - self.mag.mean(), self.mag_err)
+        else:
+            ls = LombScargle(lctime, self.mag - self.mag.mean())
+
+        frequency, power = ls.autopower(
+            # nyquist_factor=0.5,
+            minimum_frequency=min_freq,
+            maximum_frequency=max_freq,
+            samples_per_peak=30,
+            normalization='standard')
+
+        periods = 1.0 / frequency
+
+        probabilities = [0.0001]  # 0.01 %
+        fap = ls.false_alarm_level(probabilities)
+        peaks, _ = find_peaks(power, height=fap[0])
+
+        if not peaks.any():
+            self.lsp_period = None
+        else:
+            zipped_lists = zip(power[peaks], periods[peaks])
+            sorted_pairs = sorted(zipped_lists, reverse=True)
+
+            # Return period with higher power
+            self.lsp_period = sorted_pairs[0][1]
+
+        db.session.commit()

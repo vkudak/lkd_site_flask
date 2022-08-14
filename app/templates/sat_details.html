@@ -19,8 +19,10 @@
             <thead>
               <tr>
                   <th style="text-align:center;">DateTime Start (UT)</th>
-                  <th style="text-align:center;" >Filter</th>
-                  <th style="text-align:center;" >Details</th>
+                  <th style="text-align:center;">Filter</th>
+                  <th style="text-align:center;">Period</th>
+                  <th style="text-align:center;">LC</th>
+                  <th style="text-align:center;">LSP</th>
               </tr>
             </thead>
 {#                {% for lc in sat_search.get_lcs() %}#}
@@ -78,7 +80,9 @@
                 'columns': [
                     { data: 'ut_start' },
                     { data: 'filter' },
-                    { data: 'details', orderable: false  },
+                    { data: 'period', orderable: false, render: $.fn.dataTable.render.number(',', '.', 3, '') },
+                    { data: 'curve', orderable: false  },
+                    { data: 'lsp', orderable: false  },
                 ]
             });
     });
