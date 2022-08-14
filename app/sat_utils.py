@@ -6,12 +6,15 @@ from datetime import datetime, timedelta
 import time
 
 from bokeh.layouts import gridplot
-from bokeh.models import DatetimeTickFormatter, BoxSelectTool
+from bokeh.models import DatetimeTickFormatter, Text, BoxSelectTool, HoverTool, Scatter
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from bokeh.embed import file_html
 from bokeh.models import ColumnDataSource, Whisker
 from bokeh.models.arrow_heads import TeeHead
+
+from scipy.signal import find_peaks
+from astropy.timeseries import LombScargle
 
 from dateutil import parser
 from matplotlib import pyplot as plt
@@ -472,6 +475,9 @@ def plot_lc_bokeh(lc_id):
     lc = Lightcurve.get_by_id(id=lc_id)
     dt = str(lc.dt).strip('\n')
 
+    # source = ColumnDataSource(data=dict(base=lc.date_time, mag=lc.mag))
+
+    TOOLS = 'pan,wheel_zoom,box_zoom,reset,save'
     title = f"Satellite Name:{lc.sat.name}, NORAD:{lc.sat.norad}, COSPAR:{lc.sat.cospar}" + ", " + \
             "\n" + \
             f"LC start={lc.ut_start}  dt={dt}  Filter={lc.band} Observatory={lc.site}"
@@ -483,7 +489,9 @@ def plot_lc_bokeh(lc_id):
     plot = figure(title=title, plot_height=400, plot_width=800,
                   x_axis_type='datetime', min_border=10,
                   y_range=(max(lc.mag)+dm, min(lc.mag)-dm),
+                  tools=TOOLS
                   )
+
     plot.output_backend = "svg"
     plot.title.align = 'center'
     # plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
@@ -491,12 +499,18 @@ def plot_lc_bokeh(lc_id):
     plot.yaxis.axis_label = u'm\u209B\u209c [mag]'  # m_st
     plot.xaxis.axis_label = r"UT"
 
+    source = ColumnDataSource(dict(x=lc.date_time, mag=lc.mag))
+
     if lc.mag_err is None:
         plot.line(lc.date_time, lc.mag, color=f"{color[lc.band]}", line_width=0.5)
-        plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+        # plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+        glyph = Scatter(x="x", y="mag", size=5, marker="x", line_color=f"{color[lc.band]}")
+        plot.add_glyph(source, glyph)
     else:
         plot.line(lc.date_time, lc.mag, color=f"{color[lc.band]}", line_width=0.5)
-        plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+        # plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+        glyph = Scatter(x="x", y="mag", size=5, marker="x", line_color=f"{color[lc.band]}")
+        plot.add_glyph(source, glyph)
 
         base, lower, upper = [], [], []
         for i in range(0, len(lc.mag)):
@@ -540,6 +554,20 @@ def plot_lc_bokeh(lc_id):
                                                  minsec=["%H:%M:%S"],
                                                  hours=["%H:%M:%S"])
 
+    hover = HoverTool(
+        tooltips=[
+            ('time', '@x{%H:%M:%S.%3N}'),
+            ('mag', '@mag'),
+        ],
+        formatters={
+            '@x': 'datetime',
+            'mag': 'numeral',
+        },
+        mode='mouse'
+    )
+    plot.add_tools(hover)
+    #####
+
     p2 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
     p2.output_backend = "svg"
@@ -563,9 +591,107 @@ def plot_lc_bokeh(lc_id):
                                                hours=["%H:%M:%S"])
     layout = gridplot([[plot], [p2], [p3]], toolbar_options=dict(logo=None))
 
-    html = file_html(layout, CDN, "my plot")
+    html = file_html(layout, CDN, "LC plot")
     # html = file_html(plot, CDN, "my plot")
     return lc, html
+
+
+def lsp_cals(lc_id):
+    lc = Lightcurve.get_by_id(id=lc_id)
+    lctime = lc.date_time
+    lctime = [x.timestamp() for x in lctime]
+
+    max_freq = 1 / (2 * lc.dt)
+    min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
+
+    if lc.mag_err is not None:
+        ls = LombScargle(lctime, lc.mag - lc.mag.mean(), lc.mag_err)
+    else:
+        ls = LombScargle(lctime, lc.mag - lc.mag.mean())
+
+    frequency, power = ls.autopower(
+        # nyquist_factor=0.5,
+        minimum_frequency=min_freq,
+        maximum_frequency=max_freq,
+        samples_per_peak=30,
+        normalization='standard')
+
+    periods = 1.0 / frequency
+
+    probabilities = [0.0001]
+    fap = ls.false_alarm_level(probabilities)
+    peaks, _ = find_peaks(power, height=fap[0])
+
+    zipped_lists = zip(power[peaks], periods[peaks])
+    sorted_pairs = sorted(zipped_lists, reverse=True)
+
+    # TODO: ckeck results
+    return sorted_pairs[0]
+
+
+def lsp_plot_bokeh(lc_id):
+    lc = Lightcurve.get_by_id(id=lc_id)
+    lctime = lc.date_time
+    lctime = [x.timestamp() for x in lctime]
+
+    max_freq = 1 / (2 * lc.dt)
+    min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
+
+    if lc.mag_err is not None:
+        ls = LombScargle(lctime, lc.mag - lc.mag.mean(), lc.mag_err)
+    else:
+        ls = LombScargle(lctime, lc.mag - lc.mag.mean())
+
+    frequency, power = ls.autopower(
+                                    # nyquist_factor=0.5,
+                                    minimum_frequency=min_freq,
+                                    maximum_frequency=max_freq,
+                                    samples_per_peak=30,
+                                    normalization='standard')
+
+    periods = 1.0 / frequency
+
+    probabilities = [0.0001]
+    fap = ls.false_alarm_level(probabilities)
+    peaks, _ = find_peaks(power, height=fap[0])
+
+    hover = HoverTool(
+        tooltips=[
+            ('period', '@x'),
+            ('power', '@y{0.0000}'),
+        ],
+        formatters={
+            'period': 'numeral',
+            'power': 'numeral',
+        },
+        mode='mouse'
+    )
+
+    # PLOT
+    TOOLS = 'pan,wheel_zoom,box_zoom,reset,save'
+    plot = figure(title="Lomb-Scargle Periodogram", plot_height=400, plot_width=800,
+                  min_border=10, tools=TOOLS)
+    plot.add_tools(hover)
+    plot.output_backend = "svg"
+    plot.title.align = 'center'
+    plot.xaxis.axis_label = 'Period [Seconds]'
+    plot.yaxis.axis_label = "Power"
+
+    plot.line(periods, power, color="black", line_width=0.5, legend_label="Periodogram")
+    plot.line([periods.min(), periods.max()], [fap[0], fap[0]],
+              line_width=0.5, color="black", line_dash='dashdot', legend_label="0.01% FAP")
+    plot.scatter(periods[peaks], power[peaks], marker="x", size=10)
+
+    x = [x for x in periods[peaks]]
+    y = [y for y in power[peaks]]
+    text = list(map(lambda x: "%2.3f" % x, periods[peaks]))
+
+    source = ColumnDataSource(dict(x=x, y=y, text=text))
+    glyph = Text(x="x", y="y", text="text", angle=0.0, text_color="black")
+    plot.add_glyph(source, glyph)
+
+    lsp_html = file_html(plot, CDN, "my plot")
+    return lsp_html
 
 
 def plot_lc(lc_id):

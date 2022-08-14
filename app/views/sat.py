@@ -14,7 +14,7 @@ from wtforms.validators import InputRequired, Length, ValidationError, NumberRan
 
 from app.models import Satellite, db, Lightcurve
 from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc, plot_lc_bokeh, \
-    process_lc_file
+    process_lc_file, lsp_plot_bokeh
 from app.star_util import plot_sat_lc, read_sat_files, plot_ccd_lc
 
 sat_bp = Blueprint('sat', __name__)
@@ -131,8 +131,9 @@ def sat_lc_plot(lc_id):
     # lc, filename = plot_lc(lc_id)
     # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
 
-    lc, html_fig = plot_lc_bokeh(lc_id)
-    return render_template("sat_lc_details.html", lc=lc, lc_graph=html_fig)
+    lc, lc_fig = plot_lc_bokeh(lc_id)
+    lsp_fig = lsp_plot_bokeh(lc_id)
+    return render_template("sat_lc_details.html", lc=lc, lc_graph=lc_fig, lsp_graph=lsp_fig)
 
 
 @sat_bp.route("/ajaxfile_sat", methods=["POST", "GET"])
