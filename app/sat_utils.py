@@ -638,7 +638,10 @@ def lsp_plot_bokeh(lc_id, return_lc=False):
     lctime = lc.date_time
     lctime = [x.timestamp() for x in lctime]
 
-    max_freq = 1 / (2 * lc.dt)
+    if lc.dt < 1:
+        max_freq = 1.2 #/ (2 * lc.dt)
+    else:
+        max_freq = 1 / (2 * lc.dt)
     min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
 
     if lc.mag_err is not None:
