@@ -63,6 +63,7 @@ def add_lc(db, sat_id, band,
     # print("     Start processing...")
     # print(f"     Band is {band}")
     lcs, bands = Lightcurve.get_by_lc_start(norad=sat.norad, ut_start=lc_st, bands=True)
+    dt = float(dt)
 
     if band in bands:
         # if we already have LC with same ut_start and Band return None
@@ -217,6 +218,8 @@ def process_lc_file(file_content, file_ext, db):
 
             sat_end = fs.readline().strip("\n").strip("\r")[2:].strip()[:-1]
 
+            site_name = None
+
             for line in fs:
                 l = line.split(" = ")
                 if l[0] == "# COSPAR":
@@ -227,10 +230,11 @@ def process_lc_file(file_content, file_ext, db):
                     name = l[1].strip("\n").strip("\r")
                 if l[0] == "# dt":
                     dt = l[1].strip("\n").strip("\r")
-                if l[0] == "# SITE_NAME   ":
+                if l[0] == "# SITE_NAME  ":
                     site_name = l[1].strip("\n").strip("\r")
             fs.seek(0)
-            # read TLE
+            if site_name is None:
+                site_name = "Derenivka"
             try:  # ##################################
                 flux, flux_err, m, merr, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
                                                                  usecols=(6, 7, 8, 9, 10, 11, 12))
@@ -295,7 +299,7 @@ def process_lc_file(file_content, file_ext, db):
                 else:
                     # print(e.__class__.__name__)
                     print("Error = ", e, e.__class__.__name__)
-                    print("Bed format PHR in file =", file)
+                    print("Bed format PHR in file")
                 pass
 
 
@@ -596,13 +600,16 @@ def lsp_calc(lc_id=None, lc=None):
 
     lctime = [x.timestamp() for x in lctime]
 
-    max_freq = 1 / (2 * lc.dt)
+    if lc.dt < 1:
+        max_freq = 0.83  # / (2 * lc.dt)
+    else:
+        max_freq = 1 / (2 * lc.dt)
     min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
 
     if lc.mag_err is not None:
-        ls = LombScargle(lctime, lc.mag - lc.mag.mean(), lc.mag_err)
+        ls = LombScargle(lctime, lc.mag, lc.mag_err)
     else:
-        ls = LombScargle(lctime, lc.mag - lc.mag.mean())
+        ls = LombScargle(lctime, lc.mag)
 
     frequency, power = ls.autopower(
         # nyquist_factor=0.5,
@@ -617,14 +624,14 @@ def lsp_calc(lc_id=None, lc=None):
     fap = ls.false_alarm_level(probabilities)
     peaks, _ = find_peaks(power, height=fap[0])
 
-    if not peaks:
+    if not peaks.any():
         return None
     else:
         zipped_lists = zip(power[peaks], periods[peaks])
         sorted_pairs = sorted(zipped_lists, reverse=True)
 
         # Return period with higher power
-        return sorted_pairs[0][0]
+        return sorted_pairs[0][1]
 
 
 def lsp_plot_bokeh(lc_id, return_lc=False):
@@ -639,15 +646,16 @@ def lsp_plot_bokeh(lc_id, return_lc=False):
     lctime = [x.timestamp() for x in lctime]
 
     if lc.dt < 1:
-        max_freq = 1.2 #/ (2 * lc.dt)
+        max_freq = 0.83 #/ (2 * lc.dt)
     else:
         max_freq = 1 / (2 * lc.dt)
+
     min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
 
     if lc.mag_err is not None:
-        ls = LombScargle(lctime, lc.mag - lc.mag.mean(), lc.mag_err)
+        ls = LombScargle(lctime, lc.mag, lc.mag_err)
     else:
-        ls = LombScargle(lctime, lc.mag - lc.mag.mean())
+        ls = LombScargle(lctime, lc.mag)
 
     frequency, power = ls.autopower(
         # nyquist_factor=0.5,
@@ -661,6 +669,8 @@ def lsp_plot_bokeh(lc_id, return_lc=False):
     probabilities = [0.0001]
     fap = ls.false_alarm_level(probabilities)
     peaks, _ = find_peaks(power, height=fap[0])
+    # print(fap)
+    # print(periods)
 
     hover = HoverTool(
         tooltips=[
@@ -789,7 +799,10 @@ def plot_lc(lc_id):
 
 
 def calc_period_for_all_lc():
+    """
+    Patch Period value if it is None or not calculated at all
+    Returns: period for all LCs
+    """
     lcs = Lightcurve.get_all()
     for lc in lcs:
-        # print(lc.id)
         lc.calc_period()

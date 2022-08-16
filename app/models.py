@@ -291,13 +291,17 @@ class Lightcurve(db.Model):
 
         lctime = [x.timestamp() for x in lctime]
 
-        max_freq = 1 / (2 * self.dt)
+        if self.dt < 1:
+            max_freq = 0.83  # 1.2 sec
+        else:
+            max_freq = 1 / (2 * self.dt)
+
         min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
 
         if self.mag_err is not None:
-            ls = LombScargle(lctime, self.mag - self.mag.mean(), self.mag_err)
+            ls = LombScargle(lctime, self.mag, self.mag_err)
         else:
-            ls = LombScargle(lctime, self.mag - self.mag.mean())
+            ls = LombScargle(lctime, self.mag)
 
         frequency, power = ls.autopower(
             # nyquist_factor=0.5,

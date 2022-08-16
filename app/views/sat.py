@@ -38,7 +38,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 @sat_bp.route('/sat_phot.html', methods=['GET', 'POST'])
 @login_required
 def sat_phot():
-    # Uncomment to recalc ALL LCs period  (long story)
+    # PATCH LC without calculated Period
+    # Uncomment to recalc ALL LCs period  (about 7-10 min procedure !)
     # calc_period_for_all_lc()
 
     if current_user.sat_access:
@@ -135,8 +136,8 @@ def sat_lc_plot(lc_id):
     # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
 
     lc, lc_fig = plot_lc_bokeh(lc_id)
-    lsp_fig = lsp_plot_bokeh(lc_id)
-    return render_template("sat_lc_details.html", lc=lc, lc_graph=lc_fig, lsp_graph=lsp_fig)
+    # lsp_fig = lsp_plot_bokeh(lc_id)
+    return render_template("sat_lc_details.html", lc=lc, lc_graph=lc_fig)
 
 
 @sat_bp.route('/sat_lc_period_plot.html/<int:lc_id>', methods=['GET', 'POST'])
@@ -290,6 +291,7 @@ def ajax_file_lc(sat_id):
             for lc in lcs:
                 txt = url_for('sat.sat_lc_plot', lc_id=lc.id)
                 txt_lsp = url_for('sat.sat_lc_period_plot', lc_id=lc.id)
+
                 if lc.lsp_period is None:
                     period = "Aperiodic"
                 else:
@@ -302,7 +304,6 @@ def ajax_file_lc(sat_id):
                     'period': period,
                     'lsp': '<a href=' + txt_lsp + '>' + "LSP" + '</a>'
                 })
-
             response = {
                 'draw': draw,
                 # 'iTotalRecords': totalRecords,
