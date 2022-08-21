@@ -151,6 +151,7 @@ class Satellite(db.Model):
     norad = db.Column(db.Integer, nullable=False)
     cospar = db.Column(db.String(15), nullable=False)
     name = db.Column(db.String(35), nullable=False)
+    updated = db.Column(db.DateTime, nullable=True)
     # lcs = db.relationship('Lightcurve', backref='satellite', cascade='all, delete, delete-orphan')
 
     @classmethod
@@ -227,6 +228,16 @@ class Satellite(db.Model):
     def count_lcs(self):
         n = db.session.query(Lightcurve).filter(Lightcurve.sat.has(norad=self.norad)).count()
         return n
+
+    def get_last_lc_time(self):
+        qry = db.session.query(Lightcurve).filter(Lightcurve.sat.has(norad=self.norad))
+        lc = qry.order_by(Lightcurve.ut_start.desc()).first()
+        return lc.ut_start
+
+    def update_updated(self):
+        self.updated = self.get_last_lc_time()
+        db.session.commit()
+
 
 
 class Lightcurve(db.Model):

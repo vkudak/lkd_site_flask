@@ -14,7 +14,7 @@ from wtforms.validators import InputRequired, Length, ValidationError, NumberRan
 
 from app.models import Satellite, db, Lightcurve
 from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc, plot_lc_bokeh, \
-    process_lc_file, lsp_plot_bokeh, lsp_calc, calc_period_for_all_lc
+    process_lc_file, lsp_plot_bokeh, lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat
 from app.star_util import plot_sat_lc, read_sat_files, plot_ccd_lc
 
 sat_bp = Blueprint('sat', __name__)
@@ -41,6 +41,9 @@ def sat_phot():
     # PATCH LC without calculated Period
     # Uncomment to recalc ALL LCs period  (about 7-10 min procedure !)
     # calc_period_for_all_lc()
+
+    # PATCH add updated time to each satellite record
+    # calc_sat_updated_for_all_sat()
 
     if current_user.sat_access:
         lc_form = AddLcForm()
@@ -178,7 +181,7 @@ def ajax_file_sat():
                 if col_index is None:
                     break
                 col_name = request.form.get(f'columns[{col_index}][data]')
-                if col_name not in ['cospar', 'name']:
+                if col_name not in ['cospar', 'name', 'updated']:
                     col_name = 'norad'
                 descending = request.form.get(f'order[{i}][dir]') == 'desc'
                 col = getattr(Satellite, col_name)
@@ -225,6 +228,7 @@ def ajax_file_sat():
                 'cospar': sat.cospar,
                 'name': sat.name,
                 'LC': sat.count_lcs(),
+                'updated': sat.updated.strftime('%Y-%m-%d %H:%M'),
                 'n2yo': '<a href=' + "https://www.n2yo.com/satellite/?s=" + str(sat.norad) + '> link </a>',
             } for sat in sats]
 

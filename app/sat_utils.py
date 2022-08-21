@@ -64,6 +64,7 @@ def add_lc(db, sat_id, band,
     # print(f"     Band is {band}")
     lcs, bands = Lightcurve.get_by_lc_start(norad=sat.norad, ut_start=lc_st, bands=True)
     dt = float(dt)
+    sat = Satellite.get_by_id(sat_id)
 
     if band in bands:
         # if we already have LC with same ut_start and Band return None
@@ -86,6 +87,8 @@ def add_lc(db, sat_id, band,
 
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
+            sat.updated = lc.ut_start
+            db.session.add(sat)
             db.session.commit()
 
         # we have "flux_err" only. No "mag_err"
@@ -103,6 +106,8 @@ def add_lc(db, sat_id, band,
                 lc.tle = tle
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
+            sat.updated = lc.ut_start
+            db.session.add(sat)
             db.session.commit()
 
         # We have "mag_err" only No "flux_err"
@@ -120,6 +125,8 @@ def add_lc(db, sat_id, band,
                 lc.tle = tle
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
+            sat.updated = lc.ut_start
+            db.session.add(sat)
             db.session.commit()
 
         # We have no "mag_err" neither "flux_err"
@@ -137,6 +144,8 @@ def add_lc(db, sat_id, band,
                 lc.tle = tle
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
+            sat.updated = lc.ut_start
+            db.session.add(sat)
             db.session.commit()
             # print(f"commit with {band} and {lc_st}")
 
@@ -806,3 +815,13 @@ def calc_period_for_all_lc():
     lcs = Lightcurve.get_all()
     for lc in lcs:
         lc.calc_period()
+
+
+def calc_sat_updated_for_all_sat():
+    """
+    Patch Updated value for all satellites
+    Returns: last LC datetime
+    """
+    sats = Satellite.get_all()
+    for sat in sats:
+        sat.update_updated()

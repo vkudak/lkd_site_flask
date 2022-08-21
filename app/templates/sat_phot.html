@@ -17,6 +17,7 @@
               <th style="text-align:center;">Cospar</th>
               <th style="text-align:center;">Name</th>
               <th style="text-align:center;">LC</th>
+              <th style="text-align:center;">Updated</th>
               <th style="text-align:center;">n2yo</th>
           </tr>
         </thead>
@@ -100,11 +101,13 @@
                 'lengthMenu': [[10, 25, 50, -1], [10, 25, 50, "All"]],
                 searching: true,
                 sort: true,
+                order: [[4, 'desc']],
                 'columns': [
                     { data: 'norad' },
                     { data: 'cospar' },
                     { data: 'name' },
                     { data: 'LC', orderable: false },
+                    { data: 'updated' },
                     { data: 'n2yo', orderable: false },
                 ]
             });
