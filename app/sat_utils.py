@@ -87,7 +87,7 @@ def add_lc(db, sat_id, band,
 
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = lc.ut_start
+            sat.updated = datetime.utcnow()  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
 
@@ -106,7 +106,7 @@ def add_lc(db, sat_id, band,
                 lc.tle = tle
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = lc.ut_start
+            sat.updated = datetime.utcnow()  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
 
@@ -125,7 +125,7 @@ def add_lc(db, sat_id, band,
                 lc.tle = tle
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = lc.ut_start
+            sat.updated = datetime.utcnow()  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
 
@@ -144,7 +144,7 @@ def add_lc(db, sat_id, band,
                 lc.tle = tle
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = lc.ut_start
+            sat.updated = datetime.utcnow()  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
             # print(f"commit with {band} and {lc_st}")
