@@ -21,6 +21,7 @@
               <tr>
                   <th style="text-align:center;">DateTime Start (UT)</th>
                   <th style="text-align:center;">Filter</th>
+                  <th style="text-align:center;">Observer</th>
                   <th style="text-align:center;">Period</th>
                   <th style="text-align:center;">LC</th>
                   <th style="text-align:center;">LSP</th>
@@ -81,6 +82,7 @@
                 'columns': [
                     { data: 'ut_start' },
                     { data: 'filter' },
+                    { data: 'site'},
                     { data: 'period', orderable: false, render: $.fn.dataTable.render.number(',', '.', 3, '') },
                     { data: 'curve', orderable: false  },
                     { data: 'lsp', orderable: false  },

@@ -303,6 +303,7 @@ def ajax_file_lc(sat_id):
 
                 data.append({
                     'ut_start': lc.ut_start.strftime("%Y-%m-%d %H:%M:%S"),
+                    'site': lc.site,
                     'filter': lc.band,
                     'curve': '<a href=' + txt + '>' + "LC" + '</a>',
                     'period': period,
