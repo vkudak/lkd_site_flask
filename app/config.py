@@ -1,3 +1,4 @@
+from datetime import timedelta
 from os import environ, path
 from dotenv import load_dotenv
 
@@ -11,7 +12,14 @@ class Config:
     STATIC_FOLDER = 'static'
     TEMPLATES_FOLDER = 'templates'
     SQLALCHEMY_TRACK_MODIFICATIONS = True
+
     SESSION_TYPE = "filesystem"
+    SESSION_PERMANENT = False
+    PERMANENT_SESSION_LIFETIME = timedelta(hours=5)
+    # The maximum number of items the session stores
+    # before it starts deleting some, default 500
+    SESSION_FILE_THRESHOLD = 200
+
     # UPLOAD_FOLDER = path.join(basedir, "app", "static", "tmp-file")
 
 
