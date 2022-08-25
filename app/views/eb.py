@@ -71,6 +71,7 @@ def eb_list():
 
 
 @eb_bp.route('/details.html/<star_id>', methods=['GET', 'POST'])
+@login_required
 def details(star_id):
     star = Star.get_by_id(star_id)
     graph_name = plot_star(star, user=current_user)
@@ -97,6 +98,7 @@ def details(star_id):
 
 
 @eb_bp.route('/del_eb.html/<star_id>', methods=['GET'])
+@login_required
 def del_eb(star_id):
     Star.delete_by_id(star_id)
     return redirect(url_for('eb.eb_list'))

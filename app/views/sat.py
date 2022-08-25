@@ -128,12 +128,14 @@ def sat_phot():
 
 
 @sat_bp.route('/sat_details.html/<sat_id>', methods=['GET'])
+@login_required
 def sat_details(sat_id):
     sat_search = Satellite.get_by_id(id=sat_id)
     return render_template("sat_details.html", sat_search=sat_search)
 
 
 @sat_bp.route('/sat_lc_plot.html/<int:lc_id>', methods=['GET', 'POST'])
+@login_required
 def sat_lc_plot(lc_id):
     # lc, filename = plot_lc(lc_id)
     # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
@@ -144,6 +146,7 @@ def sat_lc_plot(lc_id):
 
 
 @sat_bp.route('/sat_lc_period_plot.html/<int:lc_id>', methods=['GET', 'POST'])
+@login_required
 def sat_lc_period_plot(lc_id):
     lsp_fig, lc = lsp_plot_bokeh(lc_id, return_lc=True)
     return render_template("sat_lc_lsp_details.html", lc=lc, lsp_graph=lsp_fig)
