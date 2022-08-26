@@ -11,5 +11,11 @@
             "src": "/*.*",
             "dest": "/"
         }
-    ]
+    ],
+    "functions": {
+        "run.py": {
+          "memory": 128,
+          "maxDuration": 30
+        }
+    }
 }
