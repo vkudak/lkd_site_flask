@@ -29,7 +29,8 @@ class ProdConfig(Config):
     FLASK_APP = 'run.py'
     DEBUG = False
     TESTING = False
-    DATABASE_URI = environ.get('DATABASE_URL')
+    # DATABASE_URI = environ.get('DATABASE_URL')
+    DATABASE_URI = environ.get('SUPABASE_DB_URL')
 
 
 class DevConfig(Config):
