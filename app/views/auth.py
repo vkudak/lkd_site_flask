@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FloatField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError, NumberRange
@@ -49,14 +49,24 @@ class LoginForm(FlaskForm):
 def login():
     form = LoginForm()
     if form.validate_on_submit():
+        current_app.logger.info('Logging form is valid')
+        # print("form valid")
+        current_app.logger.info('Username entered: %s', form.username.data)
+        # print(form.username.data)
+        # print(User.query.filter_by(username=form.username.data))
         user = User.query.filter_by(username=form.username.data).first()
         if user:
+            current_app.logger.info('User found in DB. Check password')
             if bcrypt.check_password_hash(user.password, form.password.data):
                 login_user(user)
                 # print(f"LOGGED IN.......{user.username}")
+                current_app.logger.info('User <%s> logged in', user.username)
                 return render_template("index.html")
             else:
+                current_app.logger.info('User <%s> wrong password', user.username)
                 flash("invalid password")
+        else:
+            current_app.logger.info('User <%s> NOT found in DB', user.username)
     return render_template("login.html", form=form)
 
 

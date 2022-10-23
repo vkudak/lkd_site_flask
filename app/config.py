@@ -13,21 +13,21 @@ class Config:
     TEMPLATES_FOLDER = 'templates'
 
     # https://stackoverflow.com/questions/58866560/flask-sqlalchemy-pool-pre-ping-only-working-sometimes
-    SQLALCHEMY_POOL_RECYCLE = 35  # value less than backend’s timeout
-    SQLALCHEMY_POOL_TIMEOUT = 7  # value less than backend’s timeout
-    SQLALCHEMY_PRE_PING = True
-    SQLALCHEMY_ENGINE_OPTIONS = {'pool_recycle': SQLALCHEMY_POOL_RECYCLE,
-                                 'pool_timeout': SQLALCHEMY_POOL_TIMEOUT,
-                                 'pool_pre_ping': SQLALCHEMY_PRE_PING}
+    # SQLALCHEMY_POOL_RECYCLE = 35  # value less than backend’s timeout
+    # SQLALCHEMY_POOL_TIMEOUT = 7  # value less than backend’s timeout
+    # SQLALCHEMY_PRE_PING = True
+    # SQLALCHEMY_ENGINE_OPTIONS = {'pool_recycle': SQLALCHEMY_POOL_RECYCLE,
+    #                              'pool_timeout': SQLALCHEMY_POOL_TIMEOUT,
+    #                              'pool_pre_ping': SQLALCHEMY_PRE_PING}
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     SESSION_TYPE = "filesystem"
-    SESSION_PERMANENT = False
-    PERMANENT_SESSION_LIFETIME = timedelta(hours=5)
+    # SESSION_PERMANENT = False
+    # PERMANENT_SESSION_LIFETIME = timedelta(hours=5)
     # The maximum number of items the session stores
     # before it starts deleting some, default 500
-    SESSION_FILE_THRESHOLD = 200
+    # SESSION_FILE_THRESHOLD = 200
 
     # UPLOAD_FOLDER = path.join(basedir, "app", "static", "tmp-file")
 
@@ -44,7 +44,8 @@ class ProdConfig(Config):
 
 class DevConfig(Config):
     FLASK_ENV = 'development'
-    SECRET_KEY = 'secret_777'
+    # SECRET_KEY = 'secret_777'
+    SECRET_KEY = environ.get('SECRET_KEY')
     DEBUG = True
     TESTING = True
     DATABASE_URI = "sqlite:///dev.db"

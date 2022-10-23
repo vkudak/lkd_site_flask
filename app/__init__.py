@@ -4,9 +4,11 @@ from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_session import Session
 from flask_migrate import Migrate
+from dotenv import load_dotenv
 
 # from flask_wtf.csrf import CSRFProtect
 
+load_dotenv('.env')
 bcrypt = Bcrypt()
 login_manager = LoginManager()
 migrate = Migrate()
@@ -43,6 +45,7 @@ def create_app():
 
     # print(os.getenv('CONFIG_TYPE', default='app.config.DevConfig'))
     # print(app.config['DATABASE_URI'])
+    # print(app.config['SECRET_KEY'])
 
     bcrypt.init_app(app)
     from app.models import db
@@ -56,7 +59,12 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        # return User.query.get(int(user_id))
+        user = User.query.filter_by(id=int(user_id)).first()
+        if user:
+            # print(user.username)
+            app.logger.info("Load User with username <%s>", user.username)
+        return user
 
     # csrf.init_app(app)
 
@@ -70,4 +78,16 @@ def create_app():
     app.app_context().push()
 
     Session(app)
+
+    # https://trstringer.com/logging-flask-gunicorn-the-manageable-way/
+    import logging
+    from flask.logging import default_handler
+
+    # # Deactivate the default flask logger so that log messages don't get duplicated
+    # app.logger.removeHandler(default_handler)
+    #
+    # gunicorn_logger = logging.getLogger('gunicorn.error')
+    # app.logger.handlers = gunicorn_logger.handlers
+    # app.logger.setLevel(gunicorn_logger.level)
+
     return app
