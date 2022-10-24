@@ -13,6 +13,6 @@ RUN ls
 
 # install the dependencies and packages in the requirements file
 RUN python3 -m pip install --upgrade pip
-RUN python3 -m pip install -r /requirements.txt
+RUN python3 -m pip install -r app/requirements.txt
 
 
