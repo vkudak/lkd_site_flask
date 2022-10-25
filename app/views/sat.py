@@ -124,7 +124,7 @@ def sat_phot():
                                    user=current_user)
     else:
         flash("User has no rights. Contact admin please.")
-        return redirect(url_for('index'))
+        return redirect(url_for('home.index'))
 
 
 @sat_bp.route('/sat_details.html/<sat_id>', methods=['GET'])
