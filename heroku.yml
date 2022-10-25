@@ -7,3 +7,4 @@ build:
     web: Dockerfile
 run:
   web: gunicorn -w 5 run:app --preload
+
