@@ -123,7 +123,7 @@ def sat_phot():
                                    # search_form=search_form,
                                    user=current_user)
     else:
-        flash("User has no rights. Contact admin please.")
+        flash("User has no rights for Sat section. Contact admin please.")
         return redirect(url_for('home.index'))
 
 

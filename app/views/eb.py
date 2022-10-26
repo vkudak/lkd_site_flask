@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, request, url_for
+from flask import Blueprint, render_template, redirect, request, url_for, flash
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, IntegerField, SubmitField
@@ -66,7 +66,7 @@ def eb_list():
         stars = Star.return_all()
         return render_template('eb_list.html', stars=stars, user=current_user, eb_form=eb_form)
     else:
-        # TODO print some message here if login unsuccessful
+        flash("User has no rights for EB section. Contact admin please.")
         return redirect(render_template('eb_phot.html'))
 
 
