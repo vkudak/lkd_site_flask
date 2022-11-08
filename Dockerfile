@@ -8,8 +8,8 @@ COPY ./requirements.txt /app/requirements.txt
 COPY . /app
 
 # switch working directory
-#WORKDIR /app
-WORKDIR /
+WORKDIR /app
+#WORKDIR /
 RUN ls
 
 # install the dependencies and packages in the requirements file
