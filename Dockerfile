@@ -8,7 +8,9 @@ COPY ./requirements.txt /app/requirements.txt
 COPY . /app
 
 # switch working directory
-WORKDIR /app
+#WORKDIR /app
+WORKDIR /
+RUN ls
 
 # install the dependencies and packages in the requirements file
 RUN python3 -m pip install --upgrade pip
