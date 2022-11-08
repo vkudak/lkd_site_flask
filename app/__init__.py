@@ -55,12 +55,14 @@ def create_app():
     # https://flask-migrate.readthedocs.io/en/latest/
 
     login_manager.init_app(app)
+    login_manager.session_protection = "strong"
     from app.models import User
 
     @login_manager.user_loader
     def load_user(user_id):
         # return User.query.get(int(user_id))
-        user = User.query.filter_by(id=int(user_id)).first()
+        user = User.query.get(int(user_id))
+        # user = User.query.filter_by(id=int(user_id)).first()
         if user:
             # print(user.username)
             app.logger.info("Load User with username <%s>", user.username)

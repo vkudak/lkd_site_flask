@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, session
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FloatField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError, NumberRange
@@ -59,7 +59,6 @@ def login():
             current_app.logger.info('User found in DB. Check password')
             if bcrypt.check_password_hash(user.password, form.password.data):
                 login_user(user)
-                # print(f"LOGGED IN.......{user.username}")
                 current_app.logger.info('User <%s> logged in', user.username)
                 return render_template("index.html")
             else:
@@ -71,8 +70,11 @@ def login():
 
 
 @auth_bp.route("/logout", methods=["GET", "POST"])
+@login_required
 def logout():
-    logout_user()
+    user = User.query.get(int(current_user.id))
+    if logout_user():
+        current_app.logger.info('User with username <%s> is logged out', user.username)
     return render_template("index.html")
 
 
