@@ -4,16 +4,17 @@ from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_session import Session
 from flask_migrate import Migrate
-from flask_wtf.csrf import CSRFProtect
 from dotenv import load_dotenv
 
-# from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect
+from flask_cors import CORS
 
 load_dotenv('.env')
 bcrypt = Bcrypt()
 login_manager = LoginManager()
 migrate = Migrate()
 csrf = CSRFProtect()
+cors = CORS()
 
 
 def setup_database(app, db):
@@ -82,6 +83,7 @@ def create_app():
 
     Session(app)
     csrf.init_app(app)
+    cors.init_app(app)
 
     # https://trstringer.com/logging-flask-gunicorn-the-manageable-way/
     import logging

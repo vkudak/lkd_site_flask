@@ -48,7 +48,8 @@ class LoginForm(FlaskForm):
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
-
+    # current_app.logger.info("Secret is %s", session)
+    # current_app.logger.info("csrf_token is %s", session['csrf_token'])
     # Check data
     if request.method == "POST":
         current_app.logger.info("form valid = %s ", form.validate_on_submit())
@@ -74,6 +75,8 @@ def login():
                 flash("invalid password")
         else:
             current_app.logger.info('User <%s> NOT found in DB', user.username)
+
+    current_app.logger.info('FORM not valid')
     return render_template("login.html", form=form)
 
 

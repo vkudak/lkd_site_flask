@@ -3,8 +3,8 @@
         <div id="logreg">
             <h2 id="text_log"> Log In </h2>
             <form method="Post" action="" id="logf">
-            {{ form.csrf_token() }}
             {{ form.hidden_tag() }}
+            {{ form.csrf_token() }}
             {{ form.username }}<br>
             {{ form.password }}<br>
             {{ form.submit }}
