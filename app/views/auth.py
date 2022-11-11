@@ -51,9 +51,9 @@ def login():
     # current_app.logger.info("Secret is %s", session)
     # current_app.logger.info("csrf_token is %s", session['csrf_token'])
     # Check data
-    if request.method == "POST":
-        current_app.logger.info("form valid = %s ", form.validate_on_submit())
-        current_app.logger.info("FORM_data = %s", request.form)
+    # if request.method == "POST":
+    #     current_app.logger.info("form valid = %s ", form.validate_on_submit())
+    #     current_app.logger.info("FORM_data = %s", request.form)
 
     if form.validate_on_submit():
         current_app.logger.info('Logging form is valid')
@@ -76,7 +76,9 @@ def login():
         else:
             current_app.logger.info('User <%s> NOT found in DB', user.username)
 
-    current_app.logger.info('FORM not valid')
+    if request.method == "POST":
+        current_app.logger.warning('FORM not valid')
+        current_app.logger.warning("FORM_data = %s", request.form)
     return render_template("login.html", form=form)
 
 
