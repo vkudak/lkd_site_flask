@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, session
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, session, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FloatField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError, NumberRange
@@ -48,6 +48,12 @@ class LoginForm(FlaskForm):
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     form = LoginForm()
+
+    # Check data
+    if request.method == "POST":
+        current_app.logger.info("form valid = %s ", form.validate_on_submit())
+        current_app.logger.info("FORM_data = %s", request.form)
+
     if form.validate_on_submit():
         current_app.logger.info('Logging form is valid')
         # print("form valid")
@@ -56,11 +62,13 @@ def login():
         # print(User.query.filter_by(username=form.username.data))
         user = User.query.filter_by(username=form.username.data).first()
         if user:
-            current_app.logger.info('User found in DB. Check password')
+            current_app.logger.info('User found in DB. Checking password...')
             if bcrypt.check_password_hash(user.password, form.password.data):
                 login_user(user)
                 current_app.logger.info('User <%s> logged in', user.username)
-                return render_template("index.html")
+                # return render_template("index.html")
+                redirect_url = request.args.get('next') or url_for('home.index')
+                return redirect(redirect_url)
             else:
                 current_app.logger.info('User <%s> wrong password', user.username)
                 flash("invalid password")
@@ -75,7 +83,8 @@ def logout():
     user = User.query.get(int(current_user.id))
     if logout_user():
         current_app.logger.info('User with username <%s> is logged out', user.username)
-    return render_template("index.html")
+    # return render_template("index.html")
+    return redirect(url_for('home.index'))
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
