@@ -354,8 +354,6 @@ def ajax_multi_lc_check():
     return "200"
 
 
-
-
 class MultiLcForm(FlaskForm):
     multi = BooleanField()
 

@@ -111,6 +111,8 @@
       const check_state = document.getElementById("multi_ckbox").checked;
       console.log("Sending data to the server that the checkbox is", check_state);
 
+      {#https://stackoverflow.com/questions/41323679/how-to-send-data-to-flask-via-ajax#}
+
         $.ajax({
             url: '/ajax_checkbox_state',
             type: 'POST',
