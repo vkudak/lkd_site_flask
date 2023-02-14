@@ -44,6 +44,7 @@ def create_app():
     # app.config['UPLOAD_FOLDER'] = "upload/lcs"
     app.config['MAX_CONTENT_PATH'] = 5 * 1024 * 1024  # 5 Mb
     app.config['UPLOAD_EXTENSIONS'] = ['.phc', '.ph']
+    app.config['multi_lc_state'] = False
 
     # print(os.getenv('CONFIG_TYPE', default='app.config.DevConfig'))
     # print(app.config['DATABASE_URI'])

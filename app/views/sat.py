@@ -9,7 +9,7 @@ from sqlalchemy import func
 from werkzeug.utils import secure_filename
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, IntegerField, FileField, MultipleFileField, SubmitField, RadioField, \
-    SelectField
+    SelectField, BooleanField
 from wtforms.validators import InputRequired, Length, ValidationError, NumberRange, DataRequired
 
 from app.models import Satellite, db, Lightcurve
@@ -127,11 +127,24 @@ def sat_phot():
         return redirect(url_for('home.index'))
 
 
-@sat_bp.route('/sat_details.html/<sat_id>', methods=['GET'])
+@sat_bp.route('/sat_details.html/<sat_id>', methods=['GET', 'POST'])
 @login_required
 def sat_details(sat_id):
+    if request.method == "POST":
+        value = request.form.get('multi')
+        print(value)
     sat_search = Satellite.get_by_id(id=sat_id)
-    return render_template("sat_details.html", sat_search=sat_search)
+
+    value = 'value' in locals() #or 'value' in globals()
+    try:
+        value
+    except NameError:
+        # var_exists = False
+        multi_form = MultiLcForm()
+    else:
+        multi_form = MultiLcForm(multi=value)
+
+    return render_template("sat_details.html", sat_search=sat_search, multi_form=multi_form)
 
 
 @sat_bp.route('/sat_lc_plot.html/<int:lc_id>', methods=['GET', 'POST'])
@@ -142,6 +155,8 @@ def sat_lc_plot(lc_id):
 
     lc, lc_fig = plot_lc_bokeh(lc_id)
     # lsp_fig = lsp_plot_bokeh(lc_id)
+    # value = request.form.get('checkbox')
+    # print(value)
     return render_template("sat_lc_details.html", lc=lc, lc_graph=lc_fig)
 
 
@@ -308,6 +323,7 @@ def ajax_file_lc(sat_id):
                     'ut_start': lc.ut_start.strftime("%Y-%m-%d %H:%M:%S"),
                     'site': lc.site,
                     'filter': lc.band,
+                    'dt': "%5.3f" % lc.dt,
                     'curve': '<a href=' + txt + '>' + "LC" + '</a>',
                     'period': period,
                     'lsp': '<a href=' + txt_lsp + '>' + "LSP" + '</a>'
@@ -323,6 +339,25 @@ def ajax_file_lc(sat_id):
             return jsonify(response)
     except Exception as e:
         print(e)
+
+
+@sat_bp.route("/ajax_checkbox_state", methods=["POST", "GET"])
+def ajax_multi_lc_check():
+    if request.method == "POST":
+        state = request.values.get('state')
+        # print(state)
+        if state == 'true':
+            current_app.config['multi_lc_state'] = True
+        else:
+            current_app.config['multi_lc_state'] = False
+        # print(current_app.config['multi_lc_state'] )
+    return "200"
+
+
+
+
+class MultiLcForm(FlaskForm):
+    multi = BooleanField()
 
 
 class AddLcForm(FlaskForm):

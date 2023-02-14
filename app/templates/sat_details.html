@@ -13,7 +13,10 @@
             NAME=<b>{{sat_search.name }}</b>
         </p>
     <br>
-    <br>
+
+<label for="multi_ckbox">Plot multiple LCs </label>
+<input id="multi_ckbox" type="checkbox" onchange="multi_ajaxRequest()" />
+
     </div>
         <div id="lc_table" style="width:80%; max-width: 820px; margin-right: auto; margin-left: auto">
          <table id="sat_lc" class="display" style="width:100%;" >
@@ -21,6 +24,7 @@
               <tr>
                   <th style="text-align:center;">DateTime Start (UT)</th>
                   <th style="text-align:center;">Filter</th>
+                  <th style="text-align:center;">dt</th>
                   <th style="text-align:center;">Observer</th>
                   <th style="text-align:center;">Period</th>
                   <th style="text-align:center;">LC</th>
@@ -92,6 +96,7 @@
                 'columns': [
                     { data: 'ut_start' },
                     { data: 'filter' },
+                    { data: 'dt' },
                     { data: 'site'},
                     { data: 'period', orderable: false, render: $.fn.dataTable.render.number(',', '.', 3, '') },
                     { data: 'curve', orderable: false  },
@@ -99,6 +104,27 @@
                 ]
             });
     });
+    </script>
+
+    <script>
+    function multi_ajaxRequest() {
+      const check_state = document.getElementById("multi_ckbox").checked;
+      console.log("Sending data to the server that the checkbox is", check_state);
+
+        $.ajax({
+            url: '/ajax_checkbox_state',
+            type: 'POST',
+            data: {'state': check_state},
+            dataType: 'json',
+            success: function(response){
+                console.log(response);
+                },
+            error: function(error){
+                console.log(error);
+                }
+        })
+
+    }
     </script>
 
 {% endblock %}
