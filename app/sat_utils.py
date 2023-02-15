@@ -595,6 +595,119 @@ def plot_lc_bokeh(lc_id):
     return lc, html
 
 
+def plot_lc_multi_bokeh(lc_id, multi=False):
+    color = {"B": "blue",
+             "V": "green",
+             "R": "red",
+             "C": "black"}
+    if multi:
+        lcs = Lightcurve.get_synch_lc(lc_id, diff_in_sec=300)
+        # print("here...", len(lcs))
+        print(lcs)
+    else:
+        # multi chckbox unchecked
+        lcs = [Lightcurve.get_by_id(id=lc_id)]
+
+    for lc in lcs:
+        dt = str(lcs[0].dt).strip('\n')
+
+        tools = 'pan,wheel_zoom,box_zoom,reset,save'
+        title = f"Satellite Name:{lcs[0].sat.name}, NORAD:{lcs[0].sat.norad}, COSPAR:{lcs[0].sat.cospar}" + ", " + \
+                "\n" + \
+                f"LC start={lcs[0].ut_start}  dt={dt}  Filter={lcs[0].band} Observatory={lcs[0].site}"
+        if lc.mag_err is None:
+            dm = 0.1
+        else:
+            dm = max(lc.mag_err)
+
+        p1 = figure(title=title, plot_height=400, plot_width=800,
+                      x_axis_type='datetime', min_border=10,
+                      y_range=(max(lc.mag) + dm, min(lc.mag) - dm),
+                      tools=tools
+                      )
+
+        p1.output_backend = "svg"
+        p1.title.align = 'center'
+
+        p1.yaxis.axis_label = u'm\u209B\u209c [mag]'  # m_st
+        p1.xaxis.axis_label = r"UT"
+
+        source = ColumnDataSource(dict(x=lc.date_time, mag=lc.mag))
+
+        if lc.mag_err is None:
+            p1.line(lc.date_time, lc.mag, color=f"{color[lc.band]}", line_width=0.5)
+            # plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+            glyph = Scatter(x="x", y="mag", size=5, marker="x", line_color=f"{color[lc.band]}")
+            p1.add_glyph(source, glyph)
+        else:
+            p1.line(lc.date_time, lc.mag, color=f"{color[lc.band]}", line_width=0.5)
+            # plot.scatter(lc.date_time, lc.mag, color=f"{color[lc.band]}", marker="x")
+            glyph = Scatter(x="x", y="mag", size=5, marker="x", line_color=f"{color[lc.band]}")
+            p1.add_glyph(source, glyph)
+
+            base, lower, upper = [], [], []
+            for i in range(0, len(lc.mag)):
+                base.append(lc.date_time[i])
+                lower.append(lc.mag[i] - lc.mag_err[i])
+                upper.append(lc.mag[i] + lc.mag_err[i])
+
+            source_error = ColumnDataSource(data=dict(base=base, lower=lower, upper=upper))
+            p1.add_layout(
+                Whisker(source=source_error, base="base", upper="upper", lower="lower",
+                        line_color=f"{color[lc.band]}",
+                        upper_head=TeeHead(line_color=f"{color[lc.band]}", size=5),
+                        lower_head=TeeHead(line_color=f"{color[lc.band]}", size=5)
+                        )
+            )
+
+        p1.xaxis.ticker.desired_num_ticks = 10
+        p1.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                                     minutes=["%H:%M:%S"],
+                                                     minsec=["%H:%M:%S"],
+                                                     hours=["%H:%M:%S"])
+
+        hover = HoverTool(
+            tooltips=[
+                ('time', '@x{%H:%M:%S.%3N}'),
+                ('mag', '@mag'),
+            ],
+            formatters={
+                '@x': 'datetime',
+                'mag': 'numeral',
+            },
+            mode='mouse'
+        )
+        p1.add_tools(hover)
+        #####
+
+        p2 = figure(plot_height=150, plot_width=800, x_range=p1.x_range,
+                    y_axis_location="left", x_axis_type='datetime')
+        p2.output_backend = "svg"
+        p2.yaxis.axis_label = r"elevation [deg]"
+        p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
+        p2.xaxis.ticker.desired_num_ticks = 10
+        p2.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                                   minutes=["%H:%M:%S"],
+                                                   minsec=["%H:%M:%S"],
+                                                   hours=["%H:%M:%S"])
+
+        p3 = figure(plot_height=150, plot_width=800, x_range=p1.x_range,
+                    y_axis_location="left", x_axis_type='datetime')
+        p3.output_backend = "svg"
+        p3.yaxis.axis_label = r"Azimuth [deg]"
+        p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
+        p3.xaxis.ticker.desired_num_ticks = 10
+        p3.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                                   minutes=["%H:%M:%S"],
+                                                   minsec=["%H:%M:%S"],
+                                                   hours=["%H:%M:%S"])
+        layout = gridplot([[p1], [p2], [p3]], toolbar_options=dict(logo=None))
+
+        html = file_html(layout, CDN, "LC plot")
+    # html = file_html(plot, CDN, "my plot")
+    return lc, html
+
+
 def lsp_calc(lc_id=None, lc=None):
     """
     Args:

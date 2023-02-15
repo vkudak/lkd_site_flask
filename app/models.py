@@ -291,6 +291,14 @@ class Lightcurve(db.Model):
         return lc
 
     @classmethod
+    def get_synch_lc(cls, id, diff_in_sec):
+        lc = db.session.query(cls).filter_by(id=id).first()
+        lcs = db.session.query(cls).filter_by(sat_id=lc.sat_id)
+        # print(lcs)
+        lcs2 = [x for x in lcs if abs((x.ut_start-lc.ut_start).total_seconds()) < diff_in_sec ]
+        return lcs2
+
+    @classmethod
     def get_all(cls):
         """
         Return all Lightcurves

@@ -15,7 +15,11 @@
     <br>
 
 <label for="multi_ckbox">Plot multiple LCs </label>
-<input id="multi_ckbox" type="checkbox" onchange="multi_ajaxRequest()" />
+{% if chckb == True %}
+    <input id="multi_ckbox" type="checkbox" checked onchange="multi_ajaxRequest()" />
+{% else %}
+    <input id="multi_ckbox" type="checkbox" onchange="multi_ajaxRequest()" />
+{% endif %}
 
     </div>
         <div id="lc_table" style="width:80%; max-width: 820px; margin-right: auto; margin-left: auto">

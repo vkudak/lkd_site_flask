@@ -14,7 +14,7 @@ from wtforms.validators import InputRequired, Length, ValidationError, NumberRan
 
 from app.models import Satellite, db, Lightcurve
 from app.sat_utils import process_lc_files, get_list_of_files, del_files_in_folder, plot_lc, plot_lc_bokeh, \
-    process_lc_file, lsp_plot_bokeh, lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat
+    process_lc_file, lsp_plot_bokeh, lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat, plot_lc_multi_bokeh
 from app.star_util import plot_sat_lc, read_sat_files, plot_ccd_lc
 
 sat_bp = Blueprint('sat', __name__)
@@ -130,21 +130,10 @@ def sat_phot():
 @sat_bp.route('/sat_details.html/<sat_id>', methods=['GET', 'POST'])
 @login_required
 def sat_details(sat_id):
-    if request.method == "POST":
-        value = request.form.get('multi')
-        print(value)
     sat_search = Satellite.get_by_id(id=sat_id)
 
-    value = 'value' in locals() #or 'value' in globals()
-    try:
-        value
-    except NameError:
-        # var_exists = False
-        multi_form = MultiLcForm()
-    else:
-        multi_form = MultiLcForm(multi=value)
-
-    return render_template("sat_details.html", sat_search=sat_search, multi_form=multi_form)
+    return render_template("sat_details.html", sat_search=sat_search,
+                                               chckb=current_app.config['multi_lc_state'] )
 
 
 @sat_bp.route('/sat_lc_plot.html/<int:lc_id>', methods=['GET', 'POST'])
@@ -153,7 +142,10 @@ def sat_lc_plot(lc_id):
     # lc, filename = plot_lc(lc_id)
     # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
 
-    lc, lc_fig = plot_lc_bokeh(lc_id)
+    # lc, lc_fig = plot_lc_bokeh(lc_id)
+
+    lc, lc_fig = plot_lc_multi_bokeh(lc_id, multi=current_app.config['multi_lc_state'])
+
     # lsp_fig = lsp_plot_bokeh(lc_id)
     # value = request.form.get('checkbox')
     # print(value)
@@ -348,14 +340,16 @@ def ajax_multi_lc_check():
         # print(state)
         if state == 'true':
             current_app.config['multi_lc_state'] = True
+            current_app.logger.info("User <%s> set Multi_lc_checkbox in True", current_user.username)
         else:
             current_app.config['multi_lc_state'] = False
+            current_app.logger.info("User <%s> set Multi_lc_checkbox in False", current_user.username)
         # print(current_app.config['multi_lc_state'] )
     return "200"
 
 
-class MultiLcForm(FlaskForm):
-    multi = BooleanField()
+# class MultiLcForm(FlaskForm):
+#     multi = BooleanField()
 
 
 class AddLcForm(FlaskForm):
