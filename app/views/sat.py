@@ -142,9 +142,10 @@ def sat_lc_plot(lc_id):
     # lc, filename = plot_lc(lc_id)
     # return render_template("sat_lc_details.html", lc=lc, lc_graph=filename)
 
-    # lc, lc_fig = plot_lc_bokeh(lc_id)
-
-    lc, lc_fig = plot_lc_multi_bokeh(lc_id, multi=current_app.config['multi_lc_state'])
+    if current_app.config['multi_lc_state']:
+        lc, lc_fig = plot_lc_multi_bokeh(lc_id)
+    else:
+        lc, lc_fig = plot_lc_bokeh(lc_id)
 
     # lsp_fig = lsp_plot_bokeh(lc_id)
     # value = request.form.get('checkbox')

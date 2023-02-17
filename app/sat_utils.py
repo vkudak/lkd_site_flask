@@ -4,6 +4,7 @@ import shutil
 import numpy as np
 from datetime import datetime, timedelta
 import time
+import textwrap
 
 from bokeh.layouts import gridplot
 from bokeh.models import DatetimeTickFormatter, Text, BoxSelectTool, HoverTool, Scatter
@@ -595,43 +596,58 @@ def plot_lc_bokeh(lc_id):
     return lc, html
 
 
-def plot_lc_multi_bokeh(lc_id, multi=False):
+def plot_lc_multi_bokeh(lc_id):
     color = {"B": "blue",
              "V": "green",
              "R": "red",
              "C": "black"}
-    if multi:
-        lcs = Lightcurve.get_synch_lc(lc_id, diff_in_sec=300)
-        # print("here...", len(lcs))
-        print(lcs)
+    lc_selected = Lightcurve.get_by_id(id=lc_id)
+    lcs = Lightcurve.get_synch_lc(lc_id, diff_in_sec=300) # list of synch LCs
+
+    bands = ",".join([lc.band for lc in lcs])
+    dts = ";".join([str(lc.dt) for lc in lcs])
+
+    # dt = str(lc_selected.dt).strip('\n')
+    tools = 'pan,wheel_zoom,box_zoom,reset,save'
+
+    title1 = f"Satellite Name:{lc_selected.sat.name}, NORAD:{lc_selected.sat.norad}, COSPAR:{lc_selected.sat.cospar},"
+    title1 = f'{title1:^100}'
+
+    title2 = f"LC start={lc_selected.ut_start}  dt={dts}  Filter={bands} Observatory={lc_selected.site}"
+    title2 = f'{title2:^100}'
+
+    # title = f"Satellite Name:{lc_selected.sat.name}, NORAD:{lc_selected.sat.norad}, COSPAR:{lc_selected.sat.cospar}" + ", " + \
+    #         "\n" + \
+    #         f"LC start={lc_selected.ut_start}  dt={dts}  Filter={bands} Observatory={lc_selected.site}"
+
+    list_ar = []
+    for i in range(0, len(lcs)):
+        list_ar.append(lcs[i].mag)
+
+    all_mag = np.concatenate(list_ar, axis=0)
+
+    max_mag = max(all_mag)
+    min_mag = min(all_mag)
+
+    if lc_selected.mag_err is None:
+        dm = 0.1
     else:
-        # multi chckbox unchecked
-        lcs = [Lightcurve.get_by_id(id=lc_id)]
+        dm = max(lc_selected.mag_err)
+
+    title = title1 + "\n" + title2
+    p1 = figure(title=title, plot_height=400, plot_width=800,
+                x_axis_type='datetime', min_border=10,
+                y_range=(max_mag + dm, min_mag - dm),
+                tools=tools
+                )
+
+    p1.output_backend = "svg"
+    p1.title.align = 'center'
+
+    p1.yaxis.axis_label = u'm\u209B\u209c [mag]'  # m_st
+    p1.xaxis.axis_label = r"UT"
 
     for lc in lcs:
-        dt = str(lcs[0].dt).strip('\n')
-
-        tools = 'pan,wheel_zoom,box_zoom,reset,save'
-        title = f"Satellite Name:{lcs[0].sat.name}, NORAD:{lcs[0].sat.norad}, COSPAR:{lcs[0].sat.cospar}" + ", " + \
-                "\n" + \
-                f"LC start={lcs[0].ut_start}  dt={dt}  Filter={lcs[0].band} Observatory={lcs[0].site}"
-        if lc.mag_err is None:
-            dm = 0.1
-        else:
-            dm = max(lc.mag_err)
-
-        p1 = figure(title=title, plot_height=400, plot_width=800,
-                      x_axis_type='datetime', min_border=10,
-                      y_range=(max(lc.mag) + dm, min(lc.mag) - dm),
-                      tools=tools
-                      )
-
-        p1.output_backend = "svg"
-        p1.title.align = 'center'
-
-        p1.yaxis.axis_label = u'm\u209B\u209c [mag]'  # m_st
-        p1.xaxis.axis_label = r"UT"
-
         source = ColumnDataSource(dict(x=lc.date_time, mag=lc.mag))
 
         if lc.mag_err is None:
@@ -680,32 +696,34 @@ def plot_lc_multi_bokeh(lc_id, multi=False):
         p1.add_tools(hover)
         #####
 
-        p2 = figure(plot_height=150, plot_width=800, x_range=p1.x_range,
-                    y_axis_location="left", x_axis_type='datetime')
-        p2.output_backend = "svg"
-        p2.yaxis.axis_label = r"elevation [deg]"
+    p2 = figure(plot_height=150, plot_width=800, x_range=p1.x_range,
+                y_axis_location="left", x_axis_type='datetime')
+    p2.output_backend = "svg"
+    p2.yaxis.axis_label = r"elevation [deg]"
+    for lc in lcs:
         p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
-        p2.xaxis.ticker.desired_num_ticks = 10
-        p2.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
-                                                   minutes=["%H:%M:%S"],
-                                                   minsec=["%H:%M:%S"],
-                                                   hours=["%H:%M:%S"])
+    p2.xaxis.ticker.desired_num_ticks = 10
+    p2.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                               minutes=["%H:%M:%S"],
+                                               minsec=["%H:%M:%S"],
+                                               hours=["%H:%M:%S"])
 
-        p3 = figure(plot_height=150, plot_width=800, x_range=p1.x_range,
-                    y_axis_location="left", x_axis_type='datetime')
-        p3.output_backend = "svg"
-        p3.yaxis.axis_label = r"Azimuth [deg]"
+    p3 = figure(plot_height=150, plot_width=800, x_range=p1.x_range,
+                y_axis_location="left", x_axis_type='datetime')
+    p3.output_backend = "svg"
+    p3.yaxis.axis_label = r"Azimuth [deg]"
+    for lc in lcs:
         p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
-        p3.xaxis.ticker.desired_num_ticks = 10
-        p3.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
-                                                   minutes=["%H:%M:%S"],
-                                                   minsec=["%H:%M:%S"],
-                                                   hours=["%H:%M:%S"])
-        layout = gridplot([[p1], [p2], [p3]], toolbar_options=dict(logo=None))
+    p3.xaxis.ticker.desired_num_ticks = 10
+    p3.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                               minutes=["%H:%M:%S"],
+                                               minsec=["%H:%M:%S"],
+                                               hours=["%H:%M:%S"])
+    layout = gridplot([[p1], [p2], [p3]], toolbar_options=dict(logo=None))
 
-        html = file_html(layout, CDN, "LC plot")
+    html = file_html(layout, CDN, "LC plot")
     # html = file_html(plot, CDN, "my plot")
-    return lc, html
+    return lc_selected, html
 
 
 def lsp_calc(lc_id=None, lc=None):
