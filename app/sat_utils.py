@@ -4,10 +4,9 @@ import shutil
 import numpy as np
 from datetime import datetime, timedelta
 import time
-import textwrap
 
 from bokeh.layouts import gridplot
-from bokeh.models import DatetimeTickFormatter, Text, BoxSelectTool, HoverTool, Scatter
+from bokeh.models import DatetimeTickFormatter, Text, HoverTool, Scatter
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from bokeh.embed import file_html
@@ -36,21 +35,21 @@ def del_files_in_folder(folder):
             pass
 
 
-def get_list_of_files(dirName):
-    # create a list of file and sub directories
+def get_list_of_files(dir_name):
+    # create a list of file and subdirectories
     # names in the given directory
-    listOfFile = os.listdir(dirName)
-    allFiles = list()
+    list_of_file = os.listdir(dir_name)
+    all_files = list()
     # Iterate over all the entries
-    for entry in listOfFile:
+    for entry in list_of_file:
         # Create full path
-        fullPath = os.path.join(dirName, entry)
+        full_path = os.path.join(dir_name, entry)
         # If entry is a directory then get the list of files in this directory
-        if os.path.isdir(fullPath):
-            allFiles = allFiles + get_list_of_files(fullPath)
+        if os.path.isdir(full_path):
+            all_files = all_files + get_list_of_files(full_path)
         else:
-            allFiles.append(fullPath)
-    return allFiles
+            all_files.append(full_path)
+    return all_files
 
 
 def add_lc(db, sat_id, band,
@@ -209,13 +208,15 @@ def process_lc_file(file_content, file_ext, db):
                        flux=impV, mag=mV,
                        az=az, el=el, rg=rg,
                        site="Uzhhorod")
+                return True
 
             except Exception as e:
-                print(e)
-                print("bed format PHC in file =", file)
+                return {'error': e, "message": f"bed format PHC in file = {file}"}
+                # print(e)
+                # print("bed format PHC in file =", file)
                 pass
 
-    elif fext[:3] == ".ph":  # .ph R B V C and others!
+    elif fext[:3] == ".ph":  # .phX where X is [B, V, R, C or others!]
         with io.StringIO(file.decode("UTF-8")) as fs:
             fs.readline()
             # fs.readline()
@@ -272,6 +273,7 @@ def process_lc_file(file_content, file_ext, db):
                        mag=m, mag_err=merr,
                        az=az, el=el, rg=rg,
                        site=site_name)
+                return True
 
             except Exception as e:
                 # if str(e) == "list index out of range":   # no merr
@@ -307,9 +309,10 @@ def process_lc_file(file_content, file_ext, db):
                            az=az, el=el, rg=rg,
                            site=site_name)
                 else:
+                    return {'error': e, "message": f"Bed format PHX in file= {file}"}
                     # print(e.__class__.__name__)
-                    print("Error = ", e, e.__class__.__name__)
-                    print("Bed format PHR in file")
+                    # print("Error = ", e, e.__class__.__name__)
+                    # print("Bed format PHR in file")
                 pass
 
 
@@ -477,7 +480,7 @@ def plot_lc_bokeh(lc_id):
 
     # source = ColumnDataSource(data=dict(base=lc.date_time, mag=lc.mag))
 
-    TOOLS = 'pan,wheel_zoom,box_zoom,reset,save'
+    tools = 'pan,wheel_zoom,box_zoom,reset,save'
     title = f"Satellite Name:{lc.sat.name}, NORAD:{lc.sat.norad}, COSPAR:{lc.sat.cospar}" + ", " + \
             "\n" + \
             f"LC start={lc.ut_start}  dt={dt}  Filter={lc.band} Observatory={lc.site}"
@@ -489,7 +492,7 @@ def plot_lc_bokeh(lc_id):
     plot = figure(title=title, plot_height=400, plot_width=800,
                   x_axis_type='datetime', min_border=10,
                   y_range=(max(lc.mag) + dm, min(lc.mag) - dm),
-                  tools=TOOLS
+                  tools=tools
                   )
 
     plot.output_backend = "svg"
@@ -825,9 +828,9 @@ def lsp_plot_bokeh(lc_id, return_lc=False):
     )
 
     # PLOT
-    TOOLS = 'pan,wheel_zoom,box_zoom,reset,save'
+    tools = 'pan,wheel_zoom,box_zoom,reset,save'
     plot = figure(title="Lomb-Scargle Periodogram", plot_height=400, plot_width=800,
-                  min_border=10, tools=TOOLS)
+                  min_border=10, tools=tools)
     plot.add_tools(hover)
     plot.output_backend = "svg"
     plot.title.align = 'center'
