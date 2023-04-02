@@ -45,10 +45,10 @@ def sat_phot():
                         current_app.logger.info(f'File {file.filename} successfully processed')
                     else:
                         current_app.logger.warning(f"""File {file.filename} processed with error
-                        \nSkipping this file....
-                        """)
+                        \nSkipping this file....""")
                 else:
-                    current_app.logger.warning(f'wrong file ext in {file.filename}')
+                    current_app.logger.warning(f'''wrong file ext in {file.filename}.
+                                               \nSkipping this file....''')
             return redirect(url_for("sat.sat_phot"))
 
         if request.method == "GET":
