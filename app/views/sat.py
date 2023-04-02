@@ -40,17 +40,15 @@ def sat_phot():
                 if file_ext in current_app.config['UPLOAD_EXTENSIONS']:
                     current_app.logger.info(f'Processing file {file.filename}...')
                     _, fext = os.path.splitext(file.filename)
-                    process_res = process_lc_file(file_content=file.read(), file_ext=fext, db=db)
+                    process_res = process_lc_file(file=file, file_ext=fext, db=db, app=current_app)
                     if process_res:
                         current_app.logger.info(f'File {file.filename} successfully processed')
                     else:
-                        current_app.logger.warning(f"""File {file.filename} processed with error: {process_res["message"]}.
-                        \nDetailed error: {process_res["error"]}
-                        \nError class: {process_res["error"].__class__.__name__}
+                        current_app.logger.warning(f"""File {file.filename} processed with error
                         \nSkipping this file....
                         """)
                 else:
-                    current_app.logger.warning(f'wrong file ext {file.filename}')
+                    current_app.logger.warning(f'wrong file ext in {file.filename}')
             return redirect(url_for("sat.sat_phot"))
 
         if request.method == "GET":

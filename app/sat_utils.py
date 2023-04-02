@@ -150,12 +150,12 @@ def add_lc(db, sat_id, band,
             # print(f"commit with {band} and {lc_st}")
 
 
-def process_lc_file(file_content, file_ext, db):
-    file = file_content
-    fext = file_ext
-    # fs = io.StringIO(file.decode("UTF-8"))
-    if fext == ".phc":
-        with io.StringIO(file.decode("UTF-8")) as fs:
+def process_lc_file(file, file_ext, db, app):
+    file_content = file.read()
+    file_name = file.filename
+    # fext = file_ext
+    if file_ext == ".phc":
+        with io.StringIO(file_content.decode("UTF-8")) as fs:
             sat_st = fs.readline().strip("\n").strip("\r")
             sat_st_date = sat_st.split()[0]
             sat_end = fs.readline().strip("\n").strip("\r")
@@ -171,6 +171,7 @@ def process_lc_file(file_content, file_ext, db):
                     dt = line.split("=")[1].strip().strip("\n").strip("\r")
             fs.seek(0)
             try:
+                # TODO: check format and maybe change to np.genfromtxt
                 impB, impV, fonB, fonV, mB, mV, az, el, rg = \
                     np.loadtxt(fs, unpack=True, skiprows=7,
                                usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9)
@@ -211,13 +212,14 @@ def process_lc_file(file_content, file_ext, db):
                 return True
 
             except Exception as e:
-                return {'error': e, "message": f"bed format PHC in file = {file}"}
+                app.logger.warning(f"error: {e}\nBed format PHC in file = {file_name}")
+                # return {'error': e, "message": f"bed format PHC in file = {file_content}"}
                 # print(e)
                 # print("bed format PHC in file =", file)
                 pass
 
-    elif fext[:3] == ".ph":  # .phX where X is [B, V, R, C or others!]
-        with io.StringIO(file.decode("UTF-8")) as fs:
+    elif file_ext[:3] == ".ph":  # .phX where X is [B, V, R, C or others!]
+        with io.StringIO(file_content.decode("UTF-8")) as fs:
             fs.readline()
             # fs.readline()
             # fs.readline()
@@ -229,8 +231,11 @@ def process_lc_file(file_content, file_ext, db):
 
             sat_end = fs.readline().strip("\n").strip("\r")[2:].strip()[:-1]
 
-            site_name = None
+            # Default values
+            site_name = "Derenivka"
+            filt = file_ext[3:] # Get filter from file extension if not available in header
 
+            # Check header
             for line in fs:
                 l = line.split(" = ")
                 if l[0] == "# COSPAR":
@@ -243,21 +248,19 @@ def process_lc_file(file_content, file_ext, db):
                     dt = l[1].strip("\n").strip("\r")
                 if l[0] == "# SITE_NAME  ":
                     site_name = l[1].strip("\n").strip("\r")
+                if l[0] == "# Filter":
+                    filt = l[1].strip("\n").strip("\r")
             fs.seek(0)
-            if site_name is None:
-                site_name = "Derenivka"
+
             try:  # ##################################
-                flux, flux_err, m, merr, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
-                                                                 usecols=(6, 7, 8, 9, 10, 11, 12))
+                flux, flux_err, m, merr, az, el, rg = np.genfromtxt(fs, skip_header=True,
+                                                                    usecols=(6, 7, 8, 9, 10, 11, 12,),
+                                                                    unpack=True)
                 fs.seek(0)
-                lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
-                                    dtype={'names': ('time',), 'formats': ('S14',)})
-                lctime = [
-                    datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
-                    for x in lctime]
-                t0 = lctime[0]
-                lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
-                          lctime]  # add DAY after 00:00:00
+                lcd, lct= np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0, 1,),
+                                       dtype=None, encoding="utf-8")
+                lctime = [x + " " + t for x in lcd for t in lct]
+                lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
 
                 sat = Satellite.get_by_norad(norad=norad)
                 if not sat:  # sat == []
@@ -266,7 +269,7 @@ def process_lc_file(file_content, file_ext, db):
                     db.session.commit()
                     sat = Satellite.get_by_norad(norad=norad)
 
-                add_lc(db=db, sat_id=sat.id, band=fext[3:],
+                add_lc(db=db, sat_id=sat.id, band=filt,
                        lc_st=sat_st, lc_end=sat_end,
                        dt=dt, tle=tle, lctime=lctime,
                        flux=flux, flux_err=flux_err,
@@ -283,17 +286,16 @@ def process_lc_file(file_content, file_ext, db):
                 if e.__class__ is IndexError:  # no merr
                     # print("No m_err")
                     fs.seek(0)
-                    flux, flux_err, m, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
-                                                               usecols=(5, 6, 7, 8, 9, 10))
+                    flux, flux_err, m, az, el, rg = np.genfromtxt(fs, skip_header=True,
+                                                                  usecols=(5, 6, 7, 8, 9, 10,),
+                                                                  unpack=True)
+                    # flux, flux_err, m, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
+                    #                                            usecols=(5, 6, 7, 8, 9, 10))
                     fs.seek(0)
-                    lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
-                                        dtype={'names': ('time',), 'formats': ('S14',)})
-                    lctime = [
-                        datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
-                        for x in lctime]
-                    t0 = lctime[0]
-                    lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
-                              lctime]  # add DAY after 00:00:00
+                    lcd, lct = np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0, 1,),
+                                             dtype=None, encoding="utf-8")
+                    lctime = [x + " " + t for x in lcd for t in lct]
+                    lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
 
                     sat = Satellite.get_by_norad(norad=norad)
                     if sat is None:
@@ -301,7 +303,7 @@ def process_lc_file(file_content, file_ext, db):
                         db.session.add(sat)
                         db.session.commit()
 
-                    add_lc(db=db, sat_id=sat.id, band=fext[3:],
+                    add_lc(db=db, sat_id=sat.id, band=filt,
                            lc_st=sat_st, lc_end=sat_end,
                            dt=dt, tle=tle, lctime=lctime,
                            flux=flux, flux_err=flux_err,
@@ -309,7 +311,8 @@ def process_lc_file(file_content, file_ext, db):
                            az=az, el=el, rg=rg,
                            site=site_name)
                 else:
-                    return {'error': e, "message": f"Bed format PHX in file= {file}"}
+                    app.logger.warning(f"error: {e}\nBed format PHX in file = {file_name}")
+                    # return {'error': e, "message": f"Bed format PHX in file= {file_content}"}
                     # print(e.__class__.__name__)
                     # print("Error = ", e, e.__class__.__name__)
                     # print("Bed format PHR in file")
