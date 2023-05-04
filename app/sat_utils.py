@@ -257,10 +257,12 @@ def process_lc_file(file, file_ext, db, app):
                                                                     usecols=(6, 7, 8, 9, 10, 11, 12,),
                                                                     unpack=True)
                 fs.seek(0)
-                lcd, lct= np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0, 1,),
+                lcd, lct = np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0, 1,),
                                        dtype=None, encoding="utf-8")
-                lctime = [x + " " + t for x in lcd for t in lct]
+                lctime = list(zip(lcd, lct))
+                lctime = [x[0] + " " + x[1] for x in lctime]
                 lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
+                print(len(lct), len(m), len(lctime))
 
                 sat = Satellite.get_by_norad(norad=norad)
                 if not sat:  # sat == []
@@ -294,7 +296,9 @@ def process_lc_file(file, file_ext, db, app):
                     fs.seek(0)
                     lcd, lct = np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0, 1,),
                                              dtype=None, encoding="utf-8")
-                    lctime = [x + " " + t for x in lcd for t in lct]
+                    # lctime = [x + " " + t for x in lcd for t in lct]
+                    lctime = list(zip(lcd, lct))
+                    lctime = [x[0] + " " + x[1] for x in lctime]
                     lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
 
                     sat = Satellite.get_by_norad(norad=norad)

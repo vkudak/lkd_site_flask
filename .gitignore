@@ -1,3 +1,4 @@
+.idea
 /flask_session/
 /app/dev.db
 /.env
