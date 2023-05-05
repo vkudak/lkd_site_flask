@@ -171,7 +171,7 @@ def process_lc_file(file, file_ext, db, app):
                     dt = line.split("=")[1].strip().strip("\n").strip("\r")
             fs.seek(0)
             try:
-                # TODO: check format and maybe change to np.genfromtxt
+                # leave LOADTXT here, because format has no '#' comments. Only hardcode skiprows will work
                 impB, impV, fonB, fonV, mB, mV, az, el, rg = \
                     np.loadtxt(fs, unpack=True, skiprows=7,
                                usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9)
@@ -262,7 +262,10 @@ def process_lc_file(file, file_ext, db, app):
                 lctime = list(zip(lcd, lct))
                 lctime = [x[0] + " " + x[1] for x in lctime]
                 lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
-                print(len(lct), len(m), len(lctime))
+
+                # Bed option
+                # lctime = [x + " " + t for x in lcd for t in lct]
+                # lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
 
                 sat = Satellite.get_by_norad(norad=norad)
                 if not sat:  # sat == []
@@ -315,11 +318,18 @@ def process_lc_file(file, file_ext, db, app):
                            az=az, el=el, rg=rg,
                            site=site_name)
                 else:
-                    app.logger.warning(f"error: {e}\nBed format PHX in file = {file_name}")
+                    app.logger.error(f"Error: {e}")
+                    app.logger.error(f"Bed format PHX in file = {file_name}")
                     # return {'error': e, "message": f"Bed format PHX in file= {file_content}"}
                     # print(e.__class__.__name__)
                     # print("Error = ", e, e.__class__.__name__)
                     # print("Bed format PHR in file")
+
+                    # If error occurs there is a chance that we have satellite without LCs
+                    # This will delete such records
+                    app.logger.info("Fixing possible 'Satellite without LCs' issue...")
+                    Satellite.clear_empty_records()
+                    app.logger.info("Done.")
                 pass
 
 

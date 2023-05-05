@@ -221,6 +221,25 @@ class Satellite(db.Model):
         sats = db.session.query(cls).filter(db.func.lower(cls.name).ilike(f'%{name.replace(" ", "%")}%'.lower())).all()
         return sats
 
+    @classmethod
+    def clear_empty_records(cls):
+        """
+        Search Satellites without LCs and delete it from DB
+        return: list of deleted satellites, or empty list
+        """
+        deleted = []
+        sats = db.session.query(cls).order_by(cls.norad).all()
+        for sat in sats:
+            # print(f"{sat.norad} \n {sat.get_lcs()} \n {not sat.get_lcs()}")
+            # if not sat.get_lcs():
+            if sat.count_lcs() == 0:
+                # delete satellite
+                # print(f"Delete sat_rec with NORAD={sat.norad}")
+                db.session.delete(sat)
+                db.session.commit()
+                deleted.append(sat.norad)
+        return deleted
+
     def get_lcs(self):
         lcs = db.session.query(Lightcurve).filter(Lightcurve.sat.has(norad=self.norad)).all()
         return lcs
