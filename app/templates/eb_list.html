@@ -14,7 +14,7 @@
             <table id="eb_table"
 {#                   style="width:100%; margin-right: auto; margin-left: auto; border-collapse: collapse;"#}
                    class="display"
-                   style="width:100%">
+                   style="width:100%; margin-right: auto; margin-left: auto; border-collapse: collapse;">
 
                 <thead>
                   <tr>
@@ -113,16 +113,31 @@
         info: true,
         order: [[4, 'asc']],
         'columns': [
-            { data: 'eb_name' },
-            { data: 'period' },
-            { data: 'epoch' },
-            { data: 'mag' },
-            { data: 'rise' },
-            { data: 'pass' },
-            { data: 'details' },
-            { data: 'remove' },
-        ]
-
+            { data: 'eb_name', "width": "20%" },
+            { data: 'period', "width": "10%"},
+            { data: 'epoch', "width": "15%" },
+            { data: 'mag', "width": "5%" },
+            { data: 'rise', "width": "20%"},
+            { data: 'pass', "width": "20%" },
+            { data: 'details', "width": "5%" },
+            { data: 'remove', "width": "5%" },
+            { data: 'done',
+                visible: false,
+                searchable: false},
+            { data: 'work',
+                visible: false,
+                searchable: false}
+        ],
+        "rowCallback": function( row, data) {
+            if (data["done"] == "True") {
+                $('td', row).css('background-color',
+                'rgba(100, 0, 0, 50)');
+          }
+            if (data["work"] == "True") {
+                $('td', row).css('background-color',
+                'rgba(20, 50, 0, 50)');
+          }
+        },
 
         });
     });

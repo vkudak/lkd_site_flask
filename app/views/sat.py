@@ -140,6 +140,8 @@ def ajax_file_sat():
             # pagination
             start = request.form.get('start', type=int)
             length = request.form.get('length', type=int)
+            if length == -1:
+                length = Satellite.query.count()
             query = query.offset(start).limit(length)
 
             sats = query.all()

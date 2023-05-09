@@ -108,8 +108,6 @@ def del_eb(star_id):
 
 @eb_bp.route("/ajax_eb", methods=["POST"])
 def ajax_file_eb():
-    print('we are here')
-    print(request.method)
     try:
         if request.method == 'POST':
             draw = request.form['draw']
@@ -119,57 +117,99 @@ def ajax_file_eb():
             query = Star.query
 
             # search filter
-            print("search start")
             if search_value:
                 query = query.filter(db.or_(
                     Star.star_name.ilike(f'%{search_value}%'),
-                    db.cast(Star.rise(current_user), db.String).ilike(f'%{search_value}%'),
+                    # db.cast(Star.rise(current_user), db.String).ilike(f'%{search_value}%'),
                     db.cast(Star.period, db.String).ilike(f'%{search_value}%'),
                     db.cast(Star.mag, db.String).ilike(f'%{search_value}%')
                 ))
             total_filtered = query.count()
-            print("search end")
 
             # Total number of records without filtering
-            # _, totalRecords = Satellite.count_sat()
+            # _, totalRecords = Star.count_sat()
 
             # sorting
+            from sqlalchemy import case
             order = []
-            i = 0
+            i = 0  # order index
             while True:
                 col_index = request.form.get(f'order[{i}][column]')
                 if col_index is None:
                     break
                 col_name = request.form.get(f'columns[{col_index}][data]')
-                if col_name not in ['name', 'period', 'mag', 'rise']:
-                    col_name = 'rise'
+                if col_name == "rise":
+                    stars_my = query.all()
+                    descending = request.form.get(f'order[{i}][dir]') == 'desc'
+                    if descending:
+                        stars_my = sorted(stars_my, key=lambda k: k.rise(current_user, get_timestamp=True), reverse=True)
+                        lls = [s.rise(current_user) for s in stars_my]
+                        # print(lls)
+                        # print('rise desc')
+                    else:
+                        stars_my = sorted(stars_my, key=lambda k: k.rise(current_user, get_timestamp=True), reverse=False)
+                        # lls = [s.rise(current_user) for s in stars_my]
+                        lls = {s.id: s.rise(current_user) for s in stars_my}
+                        # print(lls)
+                        # print('rise asc')
+                    ids_list = [star.id for star in stars_my]
+                    # print(ids_list)
+
+                    rise_ordering = case(
+                        {_id: index for index, _id in enumerate(ids_list)},
+                        value=Star.id
+                    )
+                if col_name not in ['star_name', 'period', 'mag', 'rise']:
+                    col_name = 'star_name'
                 descending = request.form.get(f'order[{i}][dir]') == 'desc'
-                col = getattr(Star, col_name)
-                if descending:
-                    col = col.desc()
-                order.append(col)
+
+                if col_name not in ["rise"]:
+                    col = getattr(Star, col_name)
+                    if descending:
+                        col = col.desc()
+                    order.append(col)
+
+                if col_name == 'rise':
+                    order.append(rise_ordering)
                 i += 1
+            # print(*order)
             if order:
                 query = query.order_by(*order)
+
 
             # pagination
             start = request.form.get('start', type=int)
             length = request.form.get('length', type=int)
+            if length == -1:
+                length = Star.query.count()
             query = query.offset(start).limit(length)
 
             stars = query.all()
+            # print([s.id for s in stars])
 
             data = [{
-                'eb_name': '<a href=' + \
-                           f"https://simbad.cds.unistra.fr/simbad/sim-basic?Ident={star.star_name}&submit=SIMBAD+search",
+                'eb_name':
+                # star.star_name,
+                    (
+                        '<a href=' + f"https://simbad.cds.unistra.fr/simbad/sim-basic?Ident={star.star_name.replace(' ', '+')}"
+                        "&submit=SIMBAD+search"
+                        f"> {star.star_name} </a>"),
                 'period': star.period,
                 'epoch': star.epoch,
                 'mag': star.mag,
-                'rise': star.rise(current_user).strftime('%Y-%m-%d %H:%M'),
-                'pass': star.pas(current_user).strftime('%Y-%m-%d %H:%M'),
+                'rise': f"{star.rise(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
+                'pass': f"{star.pas(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
                 'details': '<a href=' + f"{url_for('eb.details', star_id=star.id)}" + "> Details </a>",
-                'remove': '<a href=' + f"{url_for('eb.del_eb', star_id=star.id)}" + "> Details </a>",
+                'remove': ('<a href=' + f"{url_for('eb.del_eb', star_id=star.id)} onclick='return confirmAction()'>"
+                           " Remove </a>"),
+                'done': str(star.done),
+                'work': str(True if (star.observations and not star.done) else False),
             } for star in stars]
+
+            # data = sorted(data, key=lambda d: d['rise'], reverse=True)
+
+            # data.sort("rise")
+            # print(data[0]['done'])
 
             response = {
                 'draw': draw,
@@ -178,7 +218,6 @@ def ajax_file_eb():
                 'iTotalDisplayRecords': total_filtered,
                 'aaData': data,
             }
-            print("jason ready.")
             return jsonify(response)
     except Exception as e:
         # print(e)

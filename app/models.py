@@ -64,8 +64,14 @@ class Star(db.Model):
         star = db.session.query(cls).filter_by(id=id).first()
         return star
 
-    def rise(self, user):
+    def rise(self, user, get_timestamp=False):
         rise, _, _ = self.rise_pass_sdate(user)
+        if get_timestamp:
+            if rise == "alw up":
+                return 0  #9999999999
+            import time
+            import datetime
+            return time.mktime(datetime.datetime.strptime(rise, "%Y-%m-%d %H:%M:%S").timetuple())
         return rise
 
     def pas(self, user):
