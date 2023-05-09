@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, redirect, request, url_for, flash
+from flask import Blueprint, render_template, redirect, request, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, IntegerField, SubmitField
@@ -42,7 +42,7 @@ def eb_list():
     # print(star.phase)
 
     if current_user.eb_access:
-        stars = Star.return_all()
+        # stars = Star.return_all()
         # print(stars)
         # print(stars[0].pas(user=current_user))
         eb_form = AddEBForm()
@@ -63,8 +63,10 @@ def eb_list():
             db.session.add(star)
             db.session.commit()
 
-        stars = Star.return_all()
-        return render_template('eb_list.html', stars=stars, user=current_user, eb_form=eb_form)
+        # stars = Star.return_all()
+        # return render_template('eb_list.html', stars=stars, user=current_user, eb_form=eb_form)
+        if request.method == "GET":
+            return render_template('eb_list.html', user=current_user, eb_form=eb_form)
     else:
         flash("User has no rights for EB section. Contact admin please.")
         return redirect(render_template('eb_phot.html'))
@@ -102,6 +104,88 @@ def details(star_id):
 def del_eb(star_id):
     Star.delete_by_id(star_id)
     return redirect(url_for('eb.eb_list'))
+
+
+@eb_bp.route("/ajax_eb", methods=["POST"])
+def ajax_file_eb():
+    print('we are here')
+    print(request.method)
+    try:
+        if request.method == 'POST':
+            draw = request.form['draw']
+            search_value = request.form["search[value]"]
+            search_value = search_value.replace(" ", "%")
+
+            query = Star.query
+
+            # search filter
+            print("search start")
+            if search_value:
+                query = query.filter(db.or_(
+                    Star.star_name.ilike(f'%{search_value}%'),
+                    db.cast(Star.rise(current_user), db.String).ilike(f'%{search_value}%'),
+                    db.cast(Star.period, db.String).ilike(f'%{search_value}%'),
+                    db.cast(Star.mag, db.String).ilike(f'%{search_value}%')
+                ))
+            total_filtered = query.count()
+            print("search end")
+
+            # Total number of records without filtering
+            # _, totalRecords = Satellite.count_sat()
+
+            # sorting
+            order = []
+            i = 0
+            while True:
+                col_index = request.form.get(f'order[{i}][column]')
+                if col_index is None:
+                    break
+                col_name = request.form.get(f'columns[{col_index}][data]')
+                if col_name not in ['name', 'period', 'mag', 'rise']:
+                    col_name = 'rise'
+                descending = request.form.get(f'order[{i}][dir]') == 'desc'
+                col = getattr(Star, col_name)
+                if descending:
+                    col = col.desc()
+                order.append(col)
+                i += 1
+            if order:
+                query = query.order_by(*order)
+
+            # pagination
+            start = request.form.get('start', type=int)
+            length = request.form.get('length', type=int)
+            query = query.offset(start).limit(length)
+
+            stars = query.all()
+
+            data = [{
+                'eb_name': '<a href=' + \
+                           f"https://simbad.cds.unistra.fr/simbad/sim-basic?Ident={star.star_name}&submit=SIMBAD+search",
+                'period': star.period,
+                'epoch': star.epoch,
+                'mag': star.mag,
+                'rise': star.rise(current_user).strftime('%Y-%m-%d %H:%M'),
+                'pass': star.pas(current_user).strftime('%Y-%m-%d %H:%M'),
+                'details': '<a href=' + f"{url_for('eb.details', star_id=star.id)}" + "> Details </a>",
+                'remove': '<a href=' + f"{url_for('eb.del_eb', star_id=star.id)}" + "> Details </a>",
+            } for star in stars]
+
+            response = {
+                'draw': draw,
+                # 'iTotalRecords': totalRecords,
+                'iTotalRecords': Star.query.count(),
+                'iTotalDisplayRecords': total_filtered,
+                'aaData': data,
+            }
+            print("jason ready.")
+            return jsonify(response)
+    except Exception as e:
+        # print(e)
+        current_app.logger.error(f"""Error in ajax_file_eb function.
+        \nDetailed error: {e}
+        \nError class: {e.__class__.__name__}
+        """)
 
 
 class AddObsForm(FlaskForm):
