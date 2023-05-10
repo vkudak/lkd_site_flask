@@ -40,37 +40,38 @@
                     <img class="alignleft" src="{{ url_for('static', filename=graph).replace('tmp%5C', 'tmp/') }}"
                     width="700" height="400" alt="" />
                     <p>    Phase coverage info...</p>
-                    <ol>
-                        {% for x in star.observations %}
-                            <li style="font-family: monospace; font-size: 12px;
-                            display: inline-block;
-                            line-height:130%">
-                                {{ x.date0() }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                {{ '%0.2f' % x.phase_st()|float  }} - {{ '%0.2f' % x.phase_end()|float }} <br>
-                                {{ x.asterix() }}
-                            </li> <br>
-                        {% else %}
-                            <li>No observations yet..</li>
-                        {% endfor %}
-                    </ol>
-                    {% if user.is_admin==True %}
-{#                        <a href="{{ url_for('eb.add_obs', star_id=star.id) }}"> add_obs </a>#}
-                        <details>
-                        <summary>Add observation</summary>
-                        <div style="float: left;">
-                        <form method="Post" action="">
-                            {{ form.csrf_token }}
-                            <p style="line-height:10px; display: inline-block;"> JD for begin</p>
-                            {{ form.JD_start }}<br>
-                            <p style="line-height:10px; display: inline-block;"> JD for end&nbsp&nbsp&nbsp</p>
-                            {{ form.JD_end }}<br>
-                            {{ form.id(value=star.id, type="hidden")}} <br>
-                            {{ form.submit }}
-                        </form>
-                        </div>
-                        </details>
-                    {% endif %}
-
+                    <div id="phase_div" style="overflow: hidden">
+                        <ol>
+                            {% for x in star.observations %}
+                                <li style="font-family: monospace; font-size: 12px;
+                                display: inline-block;
+                                line-height:130%">
+                                    {{ x.date0() }} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                                    {{ '%0.2f' % x.phase_st()|float  }} - {{ '%0.2f' % x.phase_end()|float }} <br>
+                                    {{ x.asterix() }}
+                                </li> <br>
+                            {% else %}
+                                <li>No observations yet..</li>
+                            {% endfor %}
+                        </ol>
+                        {% if user.is_admin==True %}
+    {#                        <a href="{{ url_for('eb.add_obs', star_id=star.id) }}"> add_obs </a>#}
+                            <details>
+                            <summary>Add observation</summary>
+                            <div style="float: left;">
+                            <form method="Post" action="">
+                                {{ form.csrf_token }}
+                                <p style="line-height:10px; display: inline-block;"> JD for begin</p>
+                                {{ form.JD_start }}<br>
+                                <p style="line-height:10px; display: inline-block;"> JD for end&nbsp&nbsp&nbsp</p>
+                                {{ form.JD_end }}<br>
+                                {{ form.id(value=star.id, type="hidden")}} <br>
+                                {{ form.submit }}
+                            </form>
+                            </div>
+                            </details>
+                        {% endif %}
+                    </div>
                 </div>
                 <br class="clearfix" />
         {% endblock %}
