@@ -68,14 +68,16 @@ class Star(db.Model):
         rise, _, _ = self.rise_pass_sdate(user)
         if get_timestamp:
             if rise == "alw up":
-                return 0  #9999999999
-            import time
-            import datetime
-            return time.mktime(datetime.datetime.strptime(rise, "%Y-%m-%d %H:%M:%S").timetuple())
+                return 0  # return smallest possible value
+            return datetime.strptime(rise, "%Y-%m-%d %H:%M:%S").timestamp()
         return rise
 
-    def pas(self, user):
+    def pas(self, user, get_timestamp=False):
         _, pas, _ = self.rise_pass_sdate(user)
+        if get_timestamp:
+            if pas == "alw up":
+                return 9.9e10  # return biggest value
+            return datetime.strptime(pas, "%Y-%m-%d %H:%M:%S").timestamp()
         return pas
 
     def rise_pass_sdate(self, user):

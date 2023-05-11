@@ -119,8 +119,12 @@
             { data: 'mag', "width": "5%" },
             { data: 'rise', "width": "20%"},
             { data: 'pass', "width": "20%" },
-            { data: 'details', "width": "5%" },
-            { data: 'remove', "width": "5%" },
+            { data: 'details', "width": "5%"},
+            { data: 'remove', "width": "5%",
+                {% if not user.is_admin  %}
+                    visible: false
+                {% endif %}
+            },
             { data: 'done',
                 visible: false,
                 searchable: false},

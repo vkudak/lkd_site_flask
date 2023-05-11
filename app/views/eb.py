@@ -2,10 +2,11 @@ from flask import Blueprint, render_template, redirect, request, url_for, flash,
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, FloatField, IntegerField, SubmitField
-from wtforms.validators import InputRequired, Length, ValidationError, NumberRange
-import ast
+from wtforms.validators import InputRequired, Length
 
-from app.star_util import read_stars_json, plot4, plot_star, read_stars_from_db
+from sqlalchemy import case
+
+from app.star_util import plot_star
 from app.models import Star, db
 
 eb_bp = Blueprint('eb', __name__)
@@ -130,7 +131,6 @@ def ajax_file_eb():
             # _, totalRecords = Star.count_sat()
 
             # sorting
-            from sqlalchemy import case
             order = []
             i = 0  # order index
             while True:
@@ -138,41 +138,69 @@ def ajax_file_eb():
                 if col_index is None:
                     break
                 col_name = request.form.get(f'columns[{col_index}][data]')
-                if col_name == "rise":
+
+                # sort by rise_time
+                if col_name == "rise":  # if sort by rise_time
                     stars_my = query.all()
                     descending = request.form.get(f'order[{i}][dir]') == 'desc'
                     if descending:
-                        stars_my = sorted(stars_my, key=lambda k: k.rise(current_user, get_timestamp=True), reverse=True)
-                        lls = [s.rise(current_user) for s in stars_my]
-                        # print(lls)
-                        # print('rise desc')
-                    else:
-                        stars_my = sorted(stars_my, key=lambda k: k.rise(current_user, get_timestamp=True), reverse=False)
-                        # lls = [s.rise(current_user) for s in stars_my]
-                        lls = {s.id: s.rise(current_user) for s in stars_my}
-                        # print(lls)
-                        # print('rise asc')
+                        stars_my = sorted(
+                            stars_my, key=lambda k: k.rise(current_user, get_timestamp=True),
+                            reverse=True
+                        )
+                    else:  # ascending
+                        stars_my = sorted(
+                            stars_my, key=lambda k: k.rise(current_user, get_timestamp=True),
+                            reverse=False
+                        )
                     ids_list = [star.id for star in stars_my]
-                    # print(ids_list)
 
+                    # get order
                     rise_ordering = case(
                         {_id: index for index, _id in enumerate(ids_list)},
                         value=Star.id
                     )
-                if col_name not in ['star_name', 'period', 'mag', 'rise']:
+                    # append order
+                    order.append(rise_ordering)
+                ###############################
+
+                # sort by pas_time
+                if col_name == "pass":  # if sort by pas_time
+                    stars_my = query.all()
+                    descending = request.form.get(f'order[{i}][dir]') == 'desc'
+                    if descending:
+                        stars_my = sorted(
+                            stars_my, key=lambda k: k.pas(current_user, get_timestamp=True),
+                            reverse=False
+                        )
+                    else:  # ascending
+                        stars_my = sorted(
+                            stars_my, key=lambda k: k.pas(current_user, get_timestamp=True),
+                            reverse=True
+                        )
+                    ids_list = [star.id for star in stars_my]
+
+                    # get order
+                    pas_ordering = case(
+                        {_id: index for index, _id in enumerate(ids_list)},
+                        value=Star.id
+                    )
+                    order.append(pas_ordering)
+                #######################
+
+                if col_name not in ['star_name', 'period', 'mag', 'rise', 'pass']:
                     col_name = 'star_name'
                 descending = request.form.get(f'order[{i}][dir]') == 'desc'
 
-                if col_name not in ["rise"]:
+                # Form order
+                if col_name not in ["rise", "pass"]:
                     col = getattr(Star, col_name)
                     if descending:
                         col = col.desc()
                     order.append(col)
-
-                if col_name == 'rise':
-                    order.append(rise_ordering)
                 i += 1
-            # print(*order)
+
+            # set orders
             if order:
                 query = query.order_by(*order)
 
@@ -194,9 +222,9 @@ def ajax_file_eb():
                         '<a href=' + f"https://simbad.cds.unistra.fr/simbad/sim-basic?Ident={star.star_name.replace(' ', '+')}"
                         "&submit=SIMBAD+search"
                         f"> {star.star_name} </a>"),
-                'period': star.period,
-                'epoch': star.epoch,
-                'mag': star.mag,
+                'period': f"{star.period:1.8f}",
+                'epoch': f"{star.epoch:5.4f}",
+                'mag': f"{star.mag:2.2f}",
                 'rise': f"{star.rise(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
                 'pass': f"{star.pas(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
                 'details': '<a href=' + f"{url_for('eb.details', star_id=star.id)}" + "> Details </a>",
@@ -205,11 +233,6 @@ def ajax_file_eb():
                 'done': str(star.done),
                 'work': str(True if (star.observations and not star.done) else False),
             } for star in stars]
-
-            # data = sorted(data, key=lambda d: d['rise'], reverse=True)
-
-            # data.sort("rise")
-            # print(data[0]['done'])
 
             response = {
                 'draw': draw,
