@@ -65,6 +65,22 @@
                 {{ lc_form.add }}
             </form>
         </details>
+
+{#          Report #}
+        <details>
+          <summary>Create Month Report</summary>
+              <form method="post" action="{{ url_for('sat.sat_phot')}}">
+                {{ report_form.hidden_tag() }}
+                {{ report_form.csrf_token() }}
+
+                {{ report_form.month.label }}
+                {{ report_form.month(style="width:5%;")}}<br>
+                {{ report_form.year.label }}
+                {{ report_form.year(style="width:7%;") }} <br>
+
+                {{ report_form.generate}}
+              </form>
+        </details>
       </div>
   {% endif %}
 

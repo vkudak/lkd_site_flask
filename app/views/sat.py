@@ -1,20 +1,25 @@
 import os
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify, Response
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from wtforms import StringField, MultipleFileField, SubmitField, RadioField
+from wtforms import StringField, MultipleFileField, SubmitField, RadioField, IntegerField
 from wtforms.validators import Length, DataRequired
+import datetime
 
 from app.models import Satellite, db, Lightcurve
-from app.sat_utils import  plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh
+from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh
 
 # FOR PATCH case
 from app.sat_utils import lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat
 
-
 sat_bp = Blueprint('sat', __name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
+
+
+def generate_report(year, month):
+    # TODO: Generate text report from DataBase
+    return str(year) + "_" + str(month)
 
 
 @sat_bp.route('/sat_phot.html', methods=['GET', 'POST'])
@@ -29,6 +34,12 @@ def sat_phot():
 
     if current_user.sat_access:
         lc_form = AddLcForm()
+
+        today = datetime.date.today()
+        report_form = ReportForm()
+        report_form.year.data = today.year
+        report_form.month.data = today.month
+
         if lc_form.validate_on_submit() and lc_form.add.data:
             # print(lc_form.lc_file.data, end="  ")
             for file in lc_form.lc_file.data:
@@ -51,10 +62,25 @@ def sat_phot():
                                                \nSkipping this file....''')
             return redirect(url_for("sat.sat_phot"))
 
+        if report_form.validate_on_submit():
+            # print("report validated")
+            year = report_form.year.data
+            month = report_form.month.data
+            results = generate_report(year, month)
+            generator = (cell for row in results
+                         for cell in row)
+            # print("response is ready")
+
+            # https://shorturl.at/ayW01
+            return Response(generator,
+                            mimetype="text/plain",
+                            headers={"Content-Disposition": f"attachment;filename=phot_report_{year}_{month}.txt"})
+
         if request.method == "GET":
             return render_template("sat_phot.html",
                                    sats=Satellite.get_all(),
                                    lc_form=lc_form,
+                                   report_form=report_form,
                                    user=current_user)
     else:
         flash("User has no rights for Satellite section. Contact admin please.")
@@ -67,7 +93,7 @@ def sat_details(sat_id):
     sat_search = Satellite.get_by_id(id=sat_id)
 
     return render_template("sat_details.html", sat_search=sat_search,
-                                               chckb=current_app.config['multi_lc_state'] )
+                           chckb=current_app.config['multi_lc_state'])
 
 
 @sat_bp.route('/sat_lc_plot.html/<int:lc_id>', methods=['GET', 'POST'])
@@ -269,7 +295,14 @@ def ajax_multi_lc_check():
     return "200"
 
 
-
 class AddLcForm(FlaskForm):
     lc_file = MultipleFileField('File(s) Upload')
     add = SubmitField("Submit")
+
+
+class ReportForm(FlaskForm):
+    month = IntegerField(u'Month', [DataRequired()])
+    year = IntegerField(u'Year', [DataRequired()])
+    # month = StringField(u'Month', [DataRequired(), Length(max=2)])
+    # year = StringField(u'Year', [DataRequired(), Length(max=4)])
+    generate = SubmitField("Generate")
