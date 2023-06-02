@@ -52,8 +52,8 @@
 
 {#    https://flask-dropzone.readthedocs.io/en/latest/basic.html#save-uploads-with-flask#}
 {#    https://github.com/helloflask/flask-dropzone/blob/master/examples/click-upload/app.py#}
-  {% if user.is_admin %}
-      <div style="border-collapse: collapse; margin: 0; text-indent: 0ch; text-align:center">
+  {% if user.sat_access %}
+      <div style="border-collapse: collapse; margin: 0;  text-align:center">
         <details>
           <summary>Add lightcurves to DataBase</summary>
             <form method="Post" action="" enctype="multipart/form-data">

@@ -18,8 +18,29 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 
 def generate_report(year, month):
-    # TODO: Generate text report from DataBase
-    return str(year) + "_" + str(month)
+    lcs = Lightcurve.month_report_lcs(year, month)
+    res = [{'sat_name': lc.sat.name,
+            'sat_norad': lc.sat.norad,
+            'sat_cospar': lc.sat.cospar,
+            'lc_st': lc.ut_start.strftime('%Y-%m-%d %H:%M:%S UTC'),
+            'lc_band': lc.band,
+            'lc_site': lc.site}
+           for lc in lcs]
+    res = sorted(res, key=lambda k: (k['sat_norad'], k['lc_st']))
+
+    # Turn to text
+    text = ''
+    norad = 0
+    for r in res:
+        if norad == r['sat_norad']:  # if satellite is repeating
+            text += " " * 43
+            text += f"{r['lc_st']}  {r['lc_band']:3}  {r['lc_site']:10}\n"
+        else:
+            text += f"{r['sat_name']:25}  {r['sat_norad']:6}  {r['sat_cospar']:8}"
+            text += f"{r['lc_st']}  {r['lc_band']:3}  {r['lc_site']:10}\n"
+        norad = r['sat_norad']
+
+    return text
 
 
 @sat_bp.route('/sat_phot.html', methods=['GET', 'POST'])
@@ -37,8 +58,9 @@ def sat_phot():
 
         today = datetime.date.today()
         report_form = ReportForm()
-        report_form.year.data = today.year
-        report_form.month.data = today.month
+        if request.method == "GET":
+            report_form.year.data = today.year
+            report_form.month.data = today.month
 
         if lc_form.validate_on_submit() and lc_form.add.data:
             # print(lc_form.lc_file.data, end="  ")

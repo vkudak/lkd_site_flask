@@ -1,7 +1,8 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
+from sqlalchemy import and_
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 import ephem
 from scipy.signal import find_peaks
 from astropy.timeseries import LombScargle
@@ -311,6 +312,17 @@ class Lightcurve(db.Model):
             return lcs
 
         # return lc
+
+    @classmethod
+    def month_report_lcs(cls, year, month):
+        start_date = date(year, month, 1)
+        end_date = date(year, month + 1, 1) - timedelta(days=1)
+
+        lcs = db.session.query(cls).filter(
+            and_(cls.ut_start >= start_date,
+                 cls.ut_start <= end_date)
+        )
+        return lcs.all()
 
     @classmethod
     def get_by_id(cls, id):
