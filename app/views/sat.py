@@ -17,8 +17,8 @@ sat_bp = Blueprint('sat', __name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
-def generate_report(year, month):
-    lcs = Lightcurve.month_report_lcs(year, month)
+def generate_report(date_from, date_to):
+    lcs = Lightcurve.report_lcs(date_from, date_to)
     res = [{'sat_name': lc.sat.name,
             'sat_norad': lc.sat.norad,
             'sat_cospar': lc.sat.cospar,
@@ -59,8 +59,10 @@ def sat_phot():
         today = datetime.date.today()
         report_form = ReportForm()
         if request.method == "GET":
-            report_form.year.data = today.year
-            report_form.month.data = today.month
+            # report_form.year.data = today.year
+            # report_form.month.data = today.month
+            report_form.d_from.data = today.strftime("%Y-%m-%d")
+            report_form.d_to.data = today.strftime("%Y-%m-%d")
 
         if lc_form.validate_on_submit() and lc_form.add.data:
             # print(lc_form.lc_file.data, end="  ")
@@ -86,9 +88,24 @@ def sat_phot():
 
         if report_form.validate_on_submit():
             # print("report validated")
-            year = report_form.year.data
-            month = report_form.month.data
-            results = generate_report(year, month)
+            # year = report_form.year.data
+            # month = report_form.month.data
+            d_from_s = report_form.d_from.data
+            d_to_s = report_form.d_to.data
+
+            try:
+                d_from = datetime.datetime.strptime(d_from_s, '%Y-%m-%d')
+                d_to = datetime.datetime.strptime(d_to_s, '%Y-%m-%d')
+            except Exception as e:
+                current_app.logger.error(f'Error in report. Details: {e}, ErrorClass: {e.__class__.__name__}')
+                flash("Probably wrong date format. Example: YYYY-MM-DD")
+                return render_template("sat_phot.html",
+                                       sats=Satellite.get_all(),
+                                       lc_form=lc_form,
+                                       report_form=report_form,
+                                       user=current_user)
+
+            results = generate_report(d_from, d_to)
             generator = (cell for row in results
                          for cell in row)
             # print("response is ready")
@@ -96,7 +113,7 @@ def sat_phot():
             # https://shorturl.at/ayW01
             return Response(generator,
                             mimetype="text/plain",
-                            headers={"Content-Disposition": f"attachment;filename=phot_report_{year}_{month}.txt"})
+                            headers={"Content-Disposition": f"attachment;filename=phot_report_{d_from_s}.txt"})
 
         if request.method == "GET":
             return render_template("sat_phot.html",
@@ -323,8 +340,8 @@ class AddLcForm(FlaskForm):
 
 
 class ReportForm(FlaskForm):
-    month = IntegerField(u'Month', [DataRequired()])
-    year = IntegerField(u'Year', [DataRequired()])
-    # month = StringField(u'Month', [DataRequired(), Length(max=2)])
-    # year = StringField(u'Year', [DataRequired(), Length(max=4)])
+    # month = IntegerField(u'Month', [DataRequired()])
+    # year = IntegerField(u'Year', [DataRequired()])
+    d_from = StringField(u'From:', [DataRequired(), Length(min=10, max=10)])
+    d_to = StringField(u'To:', [DataRequired(), Length(min=10, max=10)])
     generate = SubmitField("Generate")

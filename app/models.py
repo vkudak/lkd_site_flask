@@ -314,13 +314,13 @@ class Lightcurve(db.Model):
         # return lc
 
     @classmethod
-    def month_report_lcs(cls, year, month):
-        start_date = date(year, month, 1)
-        end_date = date(year, month + 1, 1) - timedelta(days=1)
+    def report_lcs(cls, date_from, date_to):
+        # start_date = date(year, month, 1)
+        # end_date = date(year, month + 1, 1) - timedelta(days=1)
 
         lcs = db.session.query(cls).filter(
-            and_(cls.ut_start >= start_date,
-                 cls.ut_start <= end_date)
+            and_(cls.ut_start >= date_from,
+                 cls.ut_start <= date_to)
         )
         return lcs.all()
 

@@ -80,15 +80,15 @@
 
 {#          Report #}
         <details style="width: 45%;">
-            <summary>Create Month Report</summary>
+            <summary>Create Report</summary>
               <form method="post" action="{{ url_for('sat.sat_phot')}}">
                 {{ report_form.hidden_tag() }}
                 {{ report_form.csrf_token() }}
 
-                {{ report_form.month.label }}
-                {{ report_form.month(style="width:10%;")}}<br>
-                {{ report_form.year.label }}
-                {{ report_form.year(style="width:20%;") }} <br>
+                {{ report_form.d_from.label}}
+                {{ report_form.d_from(style="width:30%;")}}<br>
+                {{ report_form.d_to.label(style="padding-left:20px")}}
+                {{ report_form.d_to(style="width:30%;") }} <br>
 
                 {{ report_form.generate}}
               </form>
