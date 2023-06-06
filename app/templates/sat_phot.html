@@ -110,7 +110,7 @@
     {% if messages %}
     <ul>
         {% for message in messages %}
-        <li style="color:red">{{ message }}</li>
+        <li style="color:red">{{ message|safe }}</li>
         {% endfor %}
     </ul>
     {% endif %}

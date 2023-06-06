@@ -58,69 +58,59 @@ def sat_phot():
 
         today = datetime.date.today()
         report_form = ReportForm()
+
         if request.method == "GET":
-            # report_form.year.data = today.year
-            # report_form.month.data = today.month
             report_form.d_from.data = today.strftime("%Y-%m-%d")
             report_form.d_to.data = today.strftime("%Y-%m-%d")
-
-        if lc_form.validate_on_submit() and lc_form.add.data:
-            # print(lc_form.lc_file.data, end="  ")
-            for file in lc_form.lc_file.data:
-                file_ext = os.path.splitext(file.filename)
-                file_ext = file_ext[1]
-                if len(file_ext) > 2:
-                    file_ext = file_ext[:3]
-                current_app.logger.info(f'Checking file {file.filename} has allowed extension ...')
-                if file_ext in current_app.config['UPLOAD_EXTENSIONS']:
-                    current_app.logger.info(f'Processing file {file.filename}...')
-                    _, fext = os.path.splitext(file.filename)
-                    process_res = process_lc_file(file=file, file_ext=fext, db=db, app=current_app)
-                    if process_res:
-                        current_app.logger.info(f'File {file.filename} successfully processed')
-                    else:
-                        current_app.logger.warning(f"""File {file.filename} processed with error
-                        \nSkipping this file....""")
-                else:
-                    current_app.logger.warning(f'''wrong file ext in {file.filename}.
-                                               \nSkipping this file....''')
-            return redirect(url_for("sat.sat_phot"))
-
-        if report_form.validate_on_submit():
-            # print("report validated")
-            # year = report_form.year.data
-            # month = report_form.month.data
-            d_from_s = report_form.d_from.data
-            d_to_s = report_form.d_to.data
-
-            try:
-                d_from = datetime.datetime.strptime(d_from_s, '%Y-%m-%d')
-                d_to = datetime.datetime.strptime(d_to_s, '%Y-%m-%d')
-            except Exception as e:
-                current_app.logger.error(f'Error in report. Details: {e}, ErrorClass: {e.__class__.__name__}')
-                flash("Probably wrong date format. Example: YYYY-MM-DD")
-                return render_template("sat_phot.html",
-                                       sats=Satellite.get_all(),
-                                       lc_form=lc_form,
-                                       report_form=report_form,
-                                       user=current_user)
-
-            results = generate_report(d_from, d_to)
-            generator = (cell for row in results
-                         for cell in row)
-            # print("response is ready")
-
-            # https://shorturl.at/ayW01
-            return Response(generator,
-                            mimetype="text/plain",
-                            headers={"Content-Disposition": f"attachment;filename=phot_report_{d_from_s}.txt"})
-
-        if request.method == "GET":
             return render_template("sat_phot.html",
                                    sats=Satellite.get_all(),
                                    lc_form=lc_form,
                                    report_form=report_form,
                                    user=current_user)
+        else:  # POST
+            if lc_form.validate_on_submit() and lc_form.add.data:
+                # print(lc_form.lc_file.data, end="  ")
+                for file in lc_form.lc_file.data:
+                    file_ext = os.path.splitext(file.filename)
+                    file_ext = file_ext[1]
+                    if len(file_ext) > 2:
+                        file_ext = file_ext[:3]
+                    current_app.logger.info(f'Checking file {file.filename} has allowed extension ...')
+                    if file_ext in current_app.config['UPLOAD_EXTENSIONS']:
+                        current_app.logger.info(f'Processing file {file.filename}...')
+                        _, fext = os.path.splitext(file.filename)
+                        process_res = process_lc_file(file=file, file_ext=fext, db=db, app=current_app)
+                        if process_res:
+                            current_app.logger.info(f'File {file.filename} successfully processed')
+                        else:
+                            current_app.logger.warning(f"""File {file.filename} processed with error
+                            \nSkipping this file....""")
+                    else:
+                        current_app.logger.warning(f'''wrong file ext in {file.filename}.
+                                                   \nSkipping this file....''')
+                return redirect(url_for("sat.sat_phot"))
+
+            if report_form.validate_on_submit():
+                d_from_s = report_form.d_from.data
+                d_to_s = report_form.d_to.data
+
+                try:
+                    d_from = datetime.datetime.strptime(d_from_s, '%Y-%m-%d')
+                    d_to = datetime.datetime.strptime(d_to_s, '%Y-%m-%d')
+
+                    results = generate_report(d_from, d_to)
+                    generator = (cell for row in results
+                                 for cell in row)
+
+                    # https://shorturl.at/ayW01
+                    return Response(generator,
+                                    mimetype="text/plain",
+                                    headers={"Content-Disposition": f"attachment;filename=phot_report_{d_from_s}.txt"})
+                except Exception as e:
+                    current_app.logger.error(f'Error in report. Details: {e}, ErrorClass: {e.__class__.__name__}')
+                    flash(f"Probably wrong date format. Example: YYYY-MM-DD. <br>{d_from_s}---{d_to_s}")
+                    return redirect(url_for("sat.sat_phot"))
+
     else:
         flash("User has no rights for Satellite section. Contact admin please.")
         return redirect(url_for('home.index'))
