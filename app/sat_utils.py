@@ -167,6 +167,8 @@ def process_lc_file(file, file_ext, db, app):
                     norad = int(line.split("=")[1].strip())
                 if line[:4] == "NAME":
                     name = line.split("=")[1].strip().strip("\n").strip("\r")
+                    if name[:2] == "0 ":
+                        name = name[:2]  # delete leading zero in TLE name line
                 if line[:2] == "dt":
                     dt = line.split("=")[1].strip().strip("\n").strip("\r")
             fs.seek(0)
@@ -244,6 +246,8 @@ def process_lc_file(file, file_ext, db, app):
                     norad = int(l[1])
                 if l[0] == "# NAME  ":
                     name = l[1].strip("\n").strip("\r")
+                    if name[:2] == "0 ":
+                        name = name[:2]  # delete leading zero in TLE name line
                 if l[0] == "# dt":
                     dt = l[1].strip("\n").strip("\r")
                 if l[0] == "# SITE_NAME  ":

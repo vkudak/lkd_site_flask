@@ -88,9 +88,11 @@ def create_app():
     csrf.init_app(app)
     cors.init_app(app)
     cache.init_app(app,
-                   config={'CACHE_TYPE': 'FileSystemCache ', #'SimpleCache',
-                           'CACHE_DIR': 'cashe',
-                           "CACHE_THRESHOLD": 1000
+                   config={
+                       #'CACHE_TYPE': 'SimpleCache',
+                       'CACHE_TYPE': 'FileSystemCache ',
+                       'CACHE_DIR': 'cashe',
+                       "CACHE_THRESHOLD": 1000
                            }
                    )
 
