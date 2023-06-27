@@ -4,6 +4,7 @@ from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_session import Session
 from flask_migrate import Migrate
+from flask_caching import Cache
 from dotenv import load_dotenv
 
 from flask_wtf.csrf import CSRFProtect
@@ -15,6 +16,7 @@ login_manager = LoginManager()
 migrate = Migrate()
 csrf = CSRFProtect()
 cors = CORS()
+cache = Cache()
 
 
 def setup_database(app, db):
@@ -85,6 +87,12 @@ def create_app():
     Session(app)
     csrf.init_app(app)
     cors.init_app(app)
+    cache.init_app(app,
+                   config={'CACHE_TYPE': 'FileSystemCache ', #'SimpleCache',
+                           'CACHE_DIR': 'cashe',
+                           "CACHE_THRESHOLD": 1000
+                           }
+                   )
 
     # https://trstringer.com/logging-flask-gunicorn-the-manageable-way/
     import logging

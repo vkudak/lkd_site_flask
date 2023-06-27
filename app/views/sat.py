@@ -7,6 +7,7 @@ from wtforms import StringField, MultipleFileField, SubmitField, RadioField, Int
 from wtforms.validators import Length, DataRequired
 import datetime
 
+from app import cache
 from app.models import Satellite, db, Lightcurve
 from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh
 
@@ -149,81 +150,89 @@ def sat_lc_period_plot(lc_id):
     return render_template("sat_lc_lsp_details.html", lc=lc, lsp_graph=lsp_fig)
 
 
+@cache.memoize(timeout=300)
+# @cache.cached(timeout=15, key_prefix="sat_query", query_string=True)
+def get_sat_query(s_value):
+    query = Satellite.query
+    search_value = s_value
+
+    if search_value:
+        query = query.filter(db.or_(
+            Satellite.name.ilike(f'%{search_value}%'),
+            db.cast(Satellite.norad, db.String).ilike(f'%{search_value}%'),
+            db.cast(Satellite.cospar, db.String).ilike(f'%{search_value}%')
+        ))
+    total_filtered = query.count()
+
+    # Total number of records without filtering
+    # _, totalRecords = Satellite.count_sat()
+
+    # sorting
+    order = []
+    i = 0
+    while True:
+        col_index = request.form.get(f'order[{i}][column]')
+        if col_index is None:
+            break
+        col_name = request.form.get(f'columns[{col_index}][data]')
+        if col_name not in ['cospar', 'name', 'updated']:
+            col_name = 'norad'
+        descending = request.form.get(f'order[{i}][dir]') == 'desc'
+        col = getattr(Satellite, col_name)
+        if descending:
+            col = col.desc()
+        order.append(col)
+        i += 1
+    if order:
+        query = query.order_by(*order)
+
+    # pagination
+    start = request.form.get('start', type=int)
+    length = request.form.get('length', type=int)
+    if length == -1:
+        length = Satellite.query.count()
+    query = query.offset(start).limit(length)
+
+    sats = query.all()
+    print("performing func...")
+    return sats, total_filtered
+
+
 @sat_bp.route("/ajaxfile_sat", methods=["POST", "GET"])
 def ajax_file_sat():
-    try:
-        if request.method == 'POST':
-            draw = request.form['draw']
-            # row = int(request.form['start'])
-            # rowperpage = int(request.form['length'])
-            search_value = request.form["search[value]"]
-            search_value = search_value.replace(" ", "%")
+    # try:
+    if request.method == 'POST':
+        draw = request.form['draw']
+        # row = int(request.form['start'])
+        # rowperpage = int(request.form['length'])
+        search_value = request.form["search[value]"]
+        search_value = search_value.replace(" ", "%")
 
-            query = Satellite.query
+        sats, total_filtered = get_sat_query(s_value=search_value)
 
-            # search filter
-            if search_value:
-                query = query.filter(db.or_(
-                    Satellite.name.ilike(f'%{search_value}%'),
-                    db.cast(Satellite.norad, db.String).ilike(f'%{search_value}%'),
-                    db.cast(Satellite.cospar, db.String).ilike(f'%{search_value}%')
-                ))
-            total_filtered = query.count()
+        data = [{
+            'norad': '<a href=' + url_for('sat.sat_details', sat_id=sat.id) + '>' + str(sat.norad) + '</a>',
+            'cospar': sat.cospar,
+            'name': sat.name,
+            'LC': sat.count_lcs(),
+            'updated': sat.updated.strftime('%Y-%m-%d %H:%M'),
+            'n2yo': '<a href=' + "https://www.n2yo.com/satellite/?s=" + str(sat.norad) + '> link </a>',
+        } for sat in sats]
 
-            # Total number of records without filtering
-            # _, totalRecords = Satellite.count_sat()
-
-            # sorting
-            order = []
-            i = 0
-            while True:
-                col_index = request.form.get(f'order[{i}][column]')
-                if col_index is None:
-                    break
-                col_name = request.form.get(f'columns[{col_index}][data]')
-                if col_name not in ['cospar', 'name', 'updated']:
-                    col_name = 'norad'
-                descending = request.form.get(f'order[{i}][dir]') == 'desc'
-                col = getattr(Satellite, col_name)
-                if descending:
-                    col = col.desc()
-                order.append(col)
-                i += 1
-            if order:
-                query = query.order_by(*order)
-
-            # pagination
-            start = request.form.get('start', type=int)
-            length = request.form.get('length', type=int)
-            if length == -1:
-                length = Satellite.query.count()
-            query = query.offset(start).limit(length)
-
-            sats = query.all()
-
-            data = [{
-                'norad': '<a href=' + url_for('sat.sat_details', sat_id=sat.id) + '>' + str(sat.norad) + '</a>',
-                'cospar': sat.cospar,
-                'name': sat.name,
-                'LC': sat.count_lcs(),
-                'updated': sat.updated.strftime('%Y-%m-%d %H:%M'),
-                'n2yo': '<a href=' + "https://www.n2yo.com/satellite/?s=" + str(sat.norad) + '> link </a>',
-            } for sat in sats]
-
-            response = {
-                'draw': draw,
-                # 'iTotalRecords': totalRecords,
-                'iTotalRecords': Satellite.query.count(),
-                'iTotalDisplayRecords': total_filtered,
-                'aaData': data,
-            }
-            return jsonify(response)
-    except Exception as e:
-        # print(e)
-        current_app.logger.error(f"""Error in ajax_file_sat function.
-        \nDetailed error: {e}
-        \nError class: {e.__class__.__name__}
-        """)
+        response = {
+            'draw': draw,
+            # 'iTotalRecords': totalRecords,
+            'iTotalRecords': Satellite.query.count(),
+            'iTotalDisplayRecords': total_filtered,
+            'aaData': data,
+        }
+        return jsonify(response)
+    # except Exception as e:
+    #     # print(e)
+    #     current_app.logger.error(f"""Error in ajax_file_sat function.
+    #     \nDetailed error: {e}
+    #     \nError class: {e.__class__.__name__}
+    #     """)
 
 
 @sat_bp.route("/ajaxfile_lc/<int:sat_id>", methods=["POST", "GET"])
