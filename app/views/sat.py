@@ -194,7 +194,7 @@ def get_sat_query(s_value):
     query = query.offset(start).limit(length)
 
     sats = query.all()
-    print("performing func...")
+    # print("performing func...")
     return sats, total_filtered
 
 

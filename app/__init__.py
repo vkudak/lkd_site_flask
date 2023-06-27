@@ -35,6 +35,8 @@ def create_app():
     app.config.from_object(
         os.getenv('CONFIG_TYPE', default='app.config.DevConfig')
     )
+    print("sec_key =", app.config['SECRET_KEY'])
+    print("conf_type =", os.getenv('CONFIG_TYPE'))
 
     uri = app.config["DATABASE_URI"]
     if uri and uri.startswith("postgres://"):
@@ -90,7 +92,7 @@ def create_app():
     cache.init_app(app,
                    config={
                        #'CACHE_TYPE': 'SimpleCache',
-                       'CACHE_TYPE': 'FileSystemCache ',
+                       'CACHE_TYPE': 'FileSystemCache',
                        'CACHE_DIR': 'cashe',
                        "CACHE_THRESHOLD": 1000
                            }
