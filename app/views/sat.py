@@ -37,7 +37,9 @@ def generate_report(date_from, date_to):
             text += " " * 43
             text += f"{r['lc_st']}  {r['lc_band']:3}  {r['lc_site']:10}\n"
         else:
-            text += f"{r['sat_name']:25}  {r['sat_norad']:6}  {r['sat_cospar']:8}"
+            # text += f"{r['sat_name']:25}  {r['sat_norad']:6}  {r['sat_cospar']:8}"
+            t = f'"{r["sat_name"]}",({r["sat_cospar"]}/{r["sat_norad"]})'
+            text += f"{t:43}"
             text += f"{r['lc_st']}  {r['lc_band']:3}  {r['lc_site']:10}\n"
         norad = r['sat_norad']
 
@@ -200,39 +202,85 @@ def get_sat_query(s_value):
 
 @sat_bp.route("/ajaxfile_sat", methods=["POST", "GET"])
 def ajax_file_sat():
-    # try:
-    if request.method == 'POST':
-        draw = request.form['draw']
-        # row = int(request.form['start'])
-        # rowperpage = int(request.form['length'])
-        search_value = request.form["search[value]"]
-        search_value = search_value.replace(" ", "%")
+    try:
+        if request.method == 'POST':
+            draw = request.form['draw']
+            # row = int(request.form['start'])
+            # rowperpage = int(request.form['length'])
+            search_value = request.form["search[value]"]
+            search_value = search_value.replace(" ", "%")
 
-        sats, total_filtered = get_sat_query(s_value=search_value)
+            sats, total_filtered = get_sat_query(s_value=search_value)
 
-        data = [{
-            'norad': '<a href=' + url_for('sat.sat_details', sat_id=sat.id) + '>' + str(sat.norad) + '</a>',
-            'cospar': sat.cospar,
-            'name': sat.name,
-            'LC': sat.count_lcs(),
-            'updated': sat.updated.strftime('%Y-%m-%d %H:%M'),
-            'n2yo': '<a href=' + "https://www.n2yo.com/satellite/?s=" + str(sat.norad) + '> link </a>',
-        } for sat in sats]
+            data = [{
+                'norad': '<a href=' + url_for('sat.sat_details', sat_id=sat.id) + '>' + str(sat.norad) + '</a>',
+                'cospar': sat.cospar,
+                'name': sat.name,
+                'LC': sat.count_lcs(),
+                'updated': sat.updated.strftime('%Y-%m-%d %H:%M'),
+                'n2yo': '<a href=' + "https://www.n2yo.com/satellite/?s=" + str(sat.norad) + '> link </a>',
+            } for sat in sats]
 
-        response = {
-            'draw': draw,
-            # 'iTotalRecords': totalRecords,
-            'iTotalRecords': Satellite.query.count(),
-            'iTotalDisplayRecords': total_filtered,
-            'aaData': data,
-        }
-        return jsonify(response)
-    # except Exception as e:
-    #     # print(e)
-    #     current_app.logger.error(f"""Error in ajax_file_sat function.
-    #     \nDetailed error: {e}
-    #     \nError class: {e.__class__.__name__}
-    #     """)
+            response = {
+                'draw': draw,
+                # 'iTotalRecords': totalRecords,
+                'iTotalRecords': Satellite.query.count(),
+                'iTotalDisplayRecords': total_filtered,
+                'aaData': data,
+            }
+            return jsonify(response)
+    except Exception as e:
+        # print(e)
+        current_app.logger.error(f"""Error in ajax_file_sat function.
+        \nDetailed error: {e}
+        \nError class: {e.__class__.__name__}
+        """)
+
+
+@cache.memoize(timeout=300)
+def get_lcs_query(sat_id, s_value):
+    query = Lightcurve.query
+    query = query.filter(Lightcurve.sat_id == sat_id)
+    search_value = s_value
+
+    # search filter
+    if search_value:
+        query = query.filter(db.or_(
+            db.cast(Lightcurve.ut_start, db.String).ilike(f'%{search_value}%'),
+            Lightcurve.band.ilike(f'%{search_value}%')
+        ))
+    total_filtered = query.count()
+
+    # sorting
+    order = []
+    i = 0
+    while True:
+        col_index = request.form.get(f'order[{i}][column]')
+        if col_index is None:
+            break
+        col_name = request.form.get(f'columns[{col_index}][data]')
+        if col_name not in ['ut_start', 'filter']:
+            col_name = 'ut_start'
+        if col_name == "filter":
+            col_name = "band"
+        descending = request.form.get(f'order[{i}][dir]') == 'desc'
+        col = getattr(Lightcurve, col_name)
+        if descending:
+            col = col.desc()
+        order.append(col)
+        i += 1
+    if order:
+        query = query.order_by(*order)
+
+    # pagination
+    start = request.form.get('start', type=int)
+    length = request.form.get('length', type=int)
+    if length == -1:
+        length = Lightcurve.query.count()
+    query = query.offset(start).limit(length)
+
+    lcs = query.all()
+    return lcs, total_filtered
 
 
 @sat_bp.route("/ajaxfile_lc/<int:sat_id>", methods=["POST", "GET"])
@@ -243,44 +291,7 @@ def ajax_file_lc(sat_id):
             search_value = request.form["search[value]"]
             search_value = search_value.replace(" ", "%")
 
-            query = Lightcurve.query
-            query = query.filter(Lightcurve.sat_id == sat_id)
-
-            # search filter
-            if search_value:
-                query = query.filter(db.or_(
-                    db.cast(Lightcurve.ut_start, db.String).ilike(f'%{search_value}%'),
-                    Lightcurve.band.ilike(f'%{search_value}%')
-                ))
-            total_filtered = query.count()
-
-            # sorting
-            order = []
-            i = 0
-            while True:
-                col_index = request.form.get(f'order[{i}][column]')
-                if col_index is None:
-                    break
-                col_name = request.form.get(f'columns[{col_index}][data]')
-                if col_name not in ['ut_start', 'filter']:
-                    col_name = 'ut_start'
-                if col_name == "filter":
-                    col_name = "band"
-                descending = request.form.get(f'order[{i}][dir]') == 'desc'
-                col = getattr(Lightcurve, col_name)
-                if descending:
-                    col = col.desc()
-                order.append(col)
-                i += 1
-            if order:
-                query = query.order_by(*order)
-
-            # pagination
-            start = request.form.get('start', type=int)
-            length = request.form.get('length', type=int)
-            query = query.offset(start).limit(length)
-
-            lcs = query.all()
+            lcs, total_filtered = get_lcs_query(sat_id, search_value)
 
             data = []
             for lc in lcs:

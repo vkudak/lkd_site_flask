@@ -6,6 +6,7 @@ from wtforms.validators import InputRequired, Length
 
 from sqlalchemy import case
 
+from app import cache
 from app.star_util import plot_star
 from app.models import Star, db
 
@@ -75,6 +76,7 @@ def eb_list():
 
 @eb_bp.route('/details.html/<star_id>', methods=['GET', 'POST'])
 @login_required
+@cache.cached(timeout=100)
 def details(star_id):
     star = Star.get_by_id(star_id)
     graph_name = plot_star(star, user=current_user)
@@ -107,6 +109,130 @@ def del_eb(star_id):
     return redirect(url_for('eb.eb_list'))
 
 
+@cache.memoize(timeout=300)
+def get_stars_query(s_value):
+    query = Star.query
+    search_value = s_value
+
+    # search filter
+    if search_value:
+        query = query.filter(db.or_(
+            Star.star_name.ilike(f'%{search_value}%'),
+            # db.cast(Star.rise(current_user), db.String).ilike(f'%{search_value}%'),
+            db.cast(Star.period, db.String).ilike(f'%{search_value}%'),
+            db.cast(Star.mag, db.String).ilike(f'%{search_value}%')
+        ))
+    total_filtered = query.count()
+
+    # Total number of records without filtering
+    # _, totalRecords = Star.count_sat()
+
+    # sorting
+    order = []
+    i = 0  # order index
+    while True:
+        col_index = request.form.get(f'order[{i}][column]')
+        if col_index is None:
+            break
+        col_name = request.form.get(f'columns[{col_index}][data]')
+
+        # sort by rise_time
+        if col_name == "rise":  # if sort by rise_time
+            stars_my = query.all()
+            descending = request.form.get(f'order[{i}][dir]') == 'desc'
+            if descending:
+                stars_my = sorted(
+                    stars_my, key=lambda k: k.rise(current_user, get_timestamp=True),
+                    reverse=True
+                )
+            else:  # ascending
+                stars_my = sorted(
+                    stars_my, key=lambda k: k.rise(current_user, get_timestamp=True),
+                    reverse=False
+                )
+            ids_list = [star.id for star in stars_my]
+
+            # get order
+            rise_ordering = case(
+                {_id: index for index, _id in enumerate(ids_list)},
+                value=Star.id
+            )
+            # append order
+            order.append(rise_ordering)
+        ###############################
+
+        # sort by pas_time
+        if col_name == "pass":  # if sort by pas_time
+            stars_my = query.all()
+            descending = request.form.get(f'order[{i}][dir]') == 'desc'
+            if descending:
+                stars_my = sorted(
+                    stars_my, key=lambda k: k.pas(current_user, get_timestamp=True),
+                    reverse=False
+                )
+            else:  # ascending
+                stars_my = sorted(
+                    stars_my, key=lambda k: k.pas(current_user, get_timestamp=True),
+                    reverse=True
+                )
+            ids_list = [star.id for star in stars_my]
+
+            # get order
+            pas_ordering = case(
+                {_id: index for index, _id in enumerate(ids_list)},
+                value=Star.id
+            )
+            order.append(pas_ordering)
+        #######################
+
+        if col_name not in ['star_name', 'period', 'mag', 'rise', 'pass']:
+            col_name = 'star_name'
+        descending = request.form.get(f'order[{i}][dir]') == 'desc'
+
+        # Form order
+        if col_name not in ["rise", "pass"]:
+            col = getattr(Star, col_name)
+            if descending:
+                col = col.desc()
+            order.append(col)
+        i += 1
+
+    # set orders
+    if order:
+        query = query.order_by(*order)
+
+    # pagination
+    start = request.form.get('start', type=int)
+    length = request.form.get('length', type=int)
+    if length == -1:
+        length = Star.query.count()
+    query = query.offset(start).limit(length)
+
+    stars = query.all()
+    # print([s.id for s in stars])
+
+    data = [{
+        'eb_name':
+        # star.star_name,
+            (
+                    '<a href=' + f"https://simbad.cds.unistra.fr/simbad/sim-basic?Ident={star.star_name.replace(' ', '+')}"
+                                 "&submit=SIMBAD+search"
+                                 f"> {star.star_name} </a>"),
+        'period': f"{star.period:1.8f}",
+        'epoch': f"{star.epoch:5.4f}",
+        'mag': f"{star.mag:2.2f}",
+        'rise': f"{star.rise(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
+        'pass': f"{star.pas(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
+        'details': '<a href=' + f"{url_for('eb.details', star_id=star.id)}" + "> Details </a>",
+        'remove': ('<a href=' + f"{url_for('eb.del_eb', star_id=star.id)} onclick='return confirmAction()'>"
+                                " Remove </a>"),
+        'done': str(star.done),
+        'work': str(True if (star.observations and not star.done) else False),
+    } for star in stars]
+
+    return stars, total_filtered, data
+
+
 @eb_bp.route("/ajax_eb", methods=["POST"])
 def ajax_file_eb():
     try:
@@ -115,124 +241,7 @@ def ajax_file_eb():
             search_value = request.form["search[value]"]
             search_value = search_value.replace(" ", "%")
 
-            query = Star.query
-
-            # search filter
-            if search_value:
-                query = query.filter(db.or_(
-                    Star.star_name.ilike(f'%{search_value}%'),
-                    # db.cast(Star.rise(current_user), db.String).ilike(f'%{search_value}%'),
-                    db.cast(Star.period, db.String).ilike(f'%{search_value}%'),
-                    db.cast(Star.mag, db.String).ilike(f'%{search_value}%')
-                ))
-            total_filtered = query.count()
-
-            # Total number of records without filtering
-            # _, totalRecords = Star.count_sat()
-
-            # sorting
-            order = []
-            i = 0  # order index
-            while True:
-                col_index = request.form.get(f'order[{i}][column]')
-                if col_index is None:
-                    break
-                col_name = request.form.get(f'columns[{col_index}][data]')
-
-                # sort by rise_time
-                if col_name == "rise":  # if sort by rise_time
-                    stars_my = query.all()
-                    descending = request.form.get(f'order[{i}][dir]') == 'desc'
-                    if descending:
-                        stars_my = sorted(
-                            stars_my, key=lambda k: k.rise(current_user, get_timestamp=True),
-                            reverse=True
-                        )
-                    else:  # ascending
-                        stars_my = sorted(
-                            stars_my, key=lambda k: k.rise(current_user, get_timestamp=True),
-                            reverse=False
-                        )
-                    ids_list = [star.id for star in stars_my]
-
-                    # get order
-                    rise_ordering = case(
-                        {_id: index for index, _id in enumerate(ids_list)},
-                        value=Star.id
-                    )
-                    # append order
-                    order.append(rise_ordering)
-                ###############################
-
-                # sort by pas_time
-                if col_name == "pass":  # if sort by pas_time
-                    stars_my = query.all()
-                    descending = request.form.get(f'order[{i}][dir]') == 'desc'
-                    if descending:
-                        stars_my = sorted(
-                            stars_my, key=lambda k: k.pas(current_user, get_timestamp=True),
-                            reverse=False
-                        )
-                    else:  # ascending
-                        stars_my = sorted(
-                            stars_my, key=lambda k: k.pas(current_user, get_timestamp=True),
-                            reverse=True
-                        )
-                    ids_list = [star.id for star in stars_my]
-
-                    # get order
-                    pas_ordering = case(
-                        {_id: index for index, _id in enumerate(ids_list)},
-                        value=Star.id
-                    )
-                    order.append(pas_ordering)
-                #######################
-
-                if col_name not in ['star_name', 'period', 'mag', 'rise', 'pass']:
-                    col_name = 'star_name'
-                descending = request.form.get(f'order[{i}][dir]') == 'desc'
-
-                # Form order
-                if col_name not in ["rise", "pass"]:
-                    col = getattr(Star, col_name)
-                    if descending:
-                        col = col.desc()
-                    order.append(col)
-                i += 1
-
-            # set orders
-            if order:
-                query = query.order_by(*order)
-
-
-            # pagination
-            start = request.form.get('start', type=int)
-            length = request.form.get('length', type=int)
-            if length == -1:
-                length = Star.query.count()
-            query = query.offset(start).limit(length)
-
-            stars = query.all()
-            # print([s.id for s in stars])
-
-            data = [{
-                'eb_name':
-                # star.star_name,
-                    (
-                        '<a href=' + f"https://simbad.cds.unistra.fr/simbad/sim-basic?Ident={star.star_name.replace(' ', '+')}"
-                        "&submit=SIMBAD+search"
-                        f"> {star.star_name} </a>"),
-                'period': f"{star.period:1.8f}",
-                'epoch': f"{star.epoch:5.4f}",
-                'mag': f"{star.mag:2.2f}",
-                'rise': f"{star.rise(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
-                'pass': f"{star.pas(current_user):>25}",  # .strftime('%Y-%m-%d %H:%M'),
-                'details': '<a href=' + f"{url_for('eb.details', star_id=star.id)}" + "> Details </a>",
-                'remove': ('<a href=' + f"{url_for('eb.del_eb', star_id=star.id)} onclick='return confirmAction()'>"
-                           " Remove </a>"),
-                'done': str(star.done),
-                'work': str(True if (star.observations and not star.done) else False),
-            } for star in stars]
+            stars, total_filtered, data = get_stars_query(search_value)
 
             response = {
                 'draw': draw,
