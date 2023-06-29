@@ -154,7 +154,7 @@ def sat_lc_period_plot(lc_id):
 
 @cache.memoize(timeout=300)
 # @cache.cached(timeout=15, key_prefix="sat_query", query_string=True)
-def get_sat_query(s_value):
+def get_sat_query(s_value, r_start, r_length):
     query = Satellite.query
     search_value = s_value
 
@@ -189,8 +189,12 @@ def get_sat_query(s_value):
         query = query.order_by(*order)
 
     # pagination
-    start = request.form.get('start', type=int)
-    length = request.form.get('length', type=int)
+    # start = request.form.get('start', type=int)
+    # length = request.form.get('length', type=int)
+
+    start = r_start
+    length = r_length
+
     if length == -1:
         length = Satellite.query.count()
     query = query.offset(start).limit(length)
@@ -210,7 +214,10 @@ def ajax_file_sat():
             search_value = request.form["search[value]"]
             search_value = search_value.replace(" ", "%")
 
-            sats, total_filtered = get_sat_query(s_value=search_value)
+            start = request.form.get('start', type=int)
+            length = request.form.get('length', type=int)
+
+            sats, total_filtered = get_sat_query(s_value=search_value, r_start=start, r_length=length)
 
             data = [{
                 'norad': '<a href=' + url_for('sat.sat_details', sat_id=sat.id) + '>' + str(sat.norad) + '</a>',
@@ -238,7 +245,7 @@ def ajax_file_sat():
 
 
 @cache.memoize(timeout=300)
-def get_lcs_query(sat_id, s_value):
+def get_lcs_query(sat_id, s_value, r_start, r_length):
     query = Lightcurve.query
     query = query.filter(Lightcurve.sat_id == sat_id)
     search_value = s_value
@@ -273,8 +280,10 @@ def get_lcs_query(sat_id, s_value):
         query = query.order_by(*order)
 
     # pagination
-    start = request.form.get('start', type=int)
-    length = request.form.get('length', type=int)
+    # start = request.form.get('start', type=int)
+    # length = request.form.get('length', type=int)
+    start = r_start
+    length = r_length
     if length == -1:
         length = Lightcurve.query.count()
     query = query.offset(start).limit(length)
@@ -291,7 +300,10 @@ def ajax_file_lc(sat_id):
             search_value = request.form["search[value]"]
             search_value = search_value.replace(" ", "%")
 
-            lcs, total_filtered = get_lcs_query(sat_id, search_value)
+            start = request.form.get('start', type=int)
+            length = request.form.get('length', type=int)
+
+            lcs, total_filtered = get_lcs_query(sat_id, search_value, start, length)
 
             data = []
             for lc in lcs:

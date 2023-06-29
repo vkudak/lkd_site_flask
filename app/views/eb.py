@@ -110,7 +110,7 @@ def del_eb(star_id):
 
 
 @cache.memoize(timeout=300)
-def get_stars_query(s_value):
+def get_stars_query(s_value, r_start, r_length):
     query = Star.query
     search_value = s_value
 
@@ -202,8 +202,10 @@ def get_stars_query(s_value):
         query = query.order_by(*order)
 
     # pagination
-    start = request.form.get('start', type=int)
-    length = request.form.get('length', type=int)
+    # start = request.form.get('start', type=int)
+    # length = request.form.get('length', type=int)
+    start = r_start
+    length = r_length
     if length == -1:
         length = Star.query.count()
     query = query.offset(start).limit(length)
@@ -241,7 +243,10 @@ def ajax_file_eb():
             search_value = request.form["search[value]"]
             search_value = search_value.replace(" ", "%")
 
-            stars, total_filtered, data = get_stars_query(search_value)
+            start = request.form.get('start', type=int)
+            length = request.form.get('length', type=int)
+
+            stars, total_filtered, data = get_stars_query(search_value, start, length)
 
             response = {
                 'draw': draw,
