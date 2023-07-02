@@ -64,6 +64,7 @@ def eb_list():
                         )
             db.session.add(star)
             db.session.commit()
+            cache.clear()
 
         # stars = Star.return_all()
         # return render_template('eb_list.html', stars=stars, user=current_user, eb_form=eb_form)

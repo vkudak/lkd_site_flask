@@ -91,6 +91,7 @@ def sat_phot():
                     else:
                         current_app.logger.warning(f'''wrong file ext in {file.filename}.
                                                    \nSkipping this file....''')
+                cache.clear()
                 return redirect(url_for("sat.sat_phot"))
 
             if report_form.validate_on_submit():
