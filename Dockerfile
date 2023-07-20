@@ -18,4 +18,8 @@ RUN python3 -m pip install --upgrade pip
 RUN ls
 RUN python3 -m pip install -r requirements.txt
 
+EXPOSE 8000
+
+CMD ["gunicorn", "--bind" , "0.0.0.0:8000", "--workers", "1", "run:app", "--threads", "3"]
+
 
