@@ -13,12 +13,13 @@ class Config:
     TEMPLATES_FOLDER = 'templates'
 
     # https://stackoverflow.com/questions/58866560/flask-sqlalchemy-pool-pre-ping-only-working-sometimes
-    # SQLALCHEMY_POOL_RECYCLE = 35  # value less than backend’s timeout
-    # SQLALCHEMY_POOL_TIMEOUT = 7  # value less than backend’s timeout
-    # SQLALCHEMY_PRE_PING = True
-    # SQLALCHEMY_ENGINE_OPTIONS = {'pool_recycle': SQLALCHEMY_POOL_RECYCLE,
-    #                              'pool_timeout': SQLALCHEMY_POOL_TIMEOUT,
-    #                              'pool_pre_ping': SQLALCHEMY_PRE_PING}
+    SQLALCHEMY_POOL_RECYCLE = 20  # 35  # value less than backend’s timeout
+    SQLALCHEMY_POOL_TIMEOUT = 7  # value less than backend’s timeout
+    SQLALCHEMY_PRE_PING = True
+    SQLALCHEMY_ENGINE_OPTIONS = {'pool_size': 10,
+                                 'pool_recycle': SQLALCHEMY_POOL_RECYCLE,
+                                 'pool_timeout': SQLALCHEMY_POOL_TIMEOUT,
+                                 'pool_pre_ping': SQLALCHEMY_PRE_PING}
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

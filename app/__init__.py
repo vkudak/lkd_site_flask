@@ -93,7 +93,7 @@ def create_app():
                    config={
                        #'CACHE_TYPE': 'SimpleCache',
                        'CACHE_TYPE': 'FileSystemCache',
-                       'CACHE_DIR': 'cashe',
+                       'CACHE_DIR': 'cache',
                        "CACHE_THRESHOLD": 300
                            }
                    )
