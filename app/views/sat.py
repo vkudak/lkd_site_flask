@@ -155,7 +155,7 @@ def sat_lc_period_plot(lc_id):
 
 @cache.memoize(timeout=300)
 # @cache.cached(timeout=15, key_prefix="sat_query", query_string=True)
-def get_sat_query(s_value, r_start, r_length):
+def get_sat_query(s_value, r_start, r_length, r_form):
     query = Satellite.query
     search_value = s_value
 
@@ -174,13 +174,16 @@ def get_sat_query(s_value, r_start, r_length):
     order = []
     i = 0
     while True:
-        col_index = request.form.get(f'order[{i}][column]')
+        # col_index = request.form.get(f'order[{i}][column]')
+        col_index = r_form.get(f'order[{i}][column]')
         if col_index is None:
             break
-        col_name = request.form.get(f'columns[{col_index}][data]')
+        # col_name = request.form.get(f'columns[{col_index}][data]')
+        col_name = r_form.get(f'columns[{col_index}][data]')
         if col_name not in ['cospar', 'name', 'updated']:
             col_name = 'norad'
-        descending = request.form.get(f'order[{i}][dir]') == 'desc'
+        # descending = request.form.get(f'order[{i}][dir]') == 'desc'
+        descending = r_form.get(f'order[{i}][dir]') == 'desc'
         col = getattr(Satellite, col_name)
         if descending:
             col = col.desc()
@@ -218,7 +221,7 @@ def ajax_file_sat():
             start = request.form.get('start', type=int)
             length = request.form.get('length', type=int)
 
-            sats, total_filtered = get_sat_query(s_value=search_value, r_start=start, r_length=length)
+            sats, total_filtered = get_sat_query(s_value=search_value, r_start=start, r_length=length, r_form=request.form)
 
             data = [{
                 'norad': '<a href=' + url_for('sat.sat_details', sat_id=sat.id) + '>' + str(sat.norad) + '</a>',
@@ -246,7 +249,7 @@ def ajax_file_sat():
 
 
 @cache.memoize(timeout=300)
-def get_lcs_query(sat_id, s_value, r_start, r_length):
+def get_lcs_query(sat_id, s_value, r_start, r_length, r_form):
     query = Lightcurve.query
     query = query.filter(Lightcurve.sat_id == sat_id)
     search_value = s_value
@@ -263,7 +266,8 @@ def get_lcs_query(sat_id, s_value, r_start, r_length):
     order = []
     i = 0
     while True:
-        col_index = request.form.get(f'order[{i}][column]')
+        # col_index = request.form.get(f'order[{i}][column]')
+        col_index = r_form.get(f'order[{i}][column]')
         if col_index is None:
             break
         col_name = request.form.get(f'columns[{col_index}][data]')
@@ -304,7 +308,7 @@ def ajax_file_lc(sat_id):
             start = request.form.get('start', type=int)
             length = request.form.get('length', type=int)
 
-            lcs, total_filtered = get_lcs_query(sat_id, search_value, start, length)
+            lcs, total_filtered = get_lcs_query(sat_id, search_value, start, length, request.form)
 
             data = []
             for lc in lcs:
@@ -316,11 +320,21 @@ def ajax_file_lc(sat_id):
                 else:
                     period = lc.lsp_period
 
+                minutes = ((len(lc.flux) * lc.dt) / 60.0)
+                m1, m2 = divmod(minutes, 1)
+                m2 = m2 * 60.
+                if m2 < 10:
+                    m2 = "0" + str(int(m2))
+                else:
+                    m2 = str(int(m2))
+                min_sec = f"{int(m1):>3d}:{m2}"
+
                 data.append({
                     'ut_start': lc.ut_start.strftime("%Y-%m-%d %H:%M:%S"),
                     'site': lc.site,
                     'filter': lc.band,
                     'dt': "%5.3f" % lc.dt,
+                    'N': min_sec,
                     'curve': '<a href=' + txt + '>' + "LC" + '</a>',
                     'period': period,
                     'lsp': '<a href=' + txt_lsp + '>' + "LSP" + '</a>'
