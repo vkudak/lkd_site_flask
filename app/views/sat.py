@@ -9,7 +9,7 @@ import datetime
 
 from app import cache
 from app.models import Satellite, db, Lightcurve
-from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh
+from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc
 
 # FOR PATCH case
 from app.sat_utils import lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat
@@ -149,8 +149,10 @@ def sat_lc_plot(lc_id):
 @sat_bp.route('/sat_lc_period_plot.html/<int:lc_id>', methods=['GET', 'POST'])
 @login_required
 def sat_lc_period_plot(lc_id):
-    lsp_fig, lc = lsp_plot_bokeh(lc_id, return_lc=True)
-    return render_template("sat_lc_lsp_details.html", lc=lc, lsp_graph=lsp_fig)
+    lsp_fig, lc, p = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True)
+    phased_fig = plot_phased_lc(lc, p)
+    return render_template("sat_lc_lsp_details.html", lc=lc,
+                           lsp_graph=lsp_fig, ph_graph=phased_fig)
 
 
 @cache.memoize(timeout=300)

@@ -6,15 +6,16 @@ from datetime import datetime, timedelta
 import time
 
 from bokeh.layouts import gridplot
-from bokeh.models import DatetimeTickFormatter, Text, HoverTool, Scatter
+from bokeh.models import DatetimeTickFormatter, Text, HoverTool, Scatter, Title, ColumnDataSource, Whisker
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from bokeh.embed import file_html
-from bokeh.models import ColumnDataSource, Whisker
 from bokeh.models.arrow_heads import TeeHead
 
 from scipy.signal import find_peaks
 from astropy.timeseries import LombScargle
+from sklearn.preprocessing import minmax_scale
+from pdmpy import pdm
 
 from dateutil import parser
 from matplotlib import pyplot as plt
@@ -798,12 +799,15 @@ def lsp_calc(lc_id=None, lc=None):
         return sorted_pairs[0][1]
 
 
-def lsp_plot_bokeh(lc_id, return_lc=False):
+def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False):
     """
     Args:
         lc_id: id of LC
+        return_lc: return LC with parameters for further purposes
+        return_period: calculated Period value, or "None"
 
     Returns: Bokeh html plot of LSP Periodogram
+             Optionally return also LC and Period value
     """
     lc = Lightcurve.get_by_id(id=lc_id)
     lctime = lc.date_time
@@ -872,9 +876,105 @@ def lsp_plot_bokeh(lc_id, return_lc=False):
     plot.add_glyph(source, glyph)
 
     lsp_html = file_html(plot, CDN, "my plot")
+
+    if not peaks.any():
+        period = None
+    else:
+        period = periods[np.argmax(power)]
+
     if return_lc:
-        return lsp_html, lc
-    return lsp_html
+        res = [lsp_html, lc]
+    else:
+        res = [lsp_html]
+
+    if return_period:
+        res.append(period)
+
+    if return_period is False and return_lc is False:
+        return lsp_html
+    else:
+        return res
+
+
+def norm_lc(flux, mag=True, norm_range=(0, 1)):
+    if mag is False:
+        k = 1
+    else:
+        k = -1
+    return minmax_scale(k * flux, feature_range=norm_range)
+
+
+def get_phases(t, t0, p):
+    """
+    Create phases list
+        Args:
+            t: time in LC
+            t0: initial time epoch
+            p: period of LC
+        Return:
+            List of phases
+    """
+    t = np.array(t)
+    ph = np.mod(t - t0, p)/float(p)
+    return ph
+
+
+def plot_phased_lc(lc, period):
+    """
+    Create phased plot of LC
+    Args:
+        lc: lc instance
+        period: possible period in seconds (from LSP method)
+    Return:
+        Two plots - one with Period from LSP, second with Period defined with PDM method where P is +/- 3 *P_lsp
+        If period is None - return None
+    """
+    if period is None:
+        return None
+    else:
+        t = [x.timestamp() for x in lc.date_time]
+        mag_norm = norm_lc(lc.mag)
+        phase1 = get_phases(t, t[0], period)
+
+        # new period search
+        freq, theta = pdm(t, mag_norm,
+                          f_min=1./period/3., f_max=1./period*3.0, delf=1e-5)  # 1e-6 ???
+        period2 = 1 / freq[np.argmin(theta)]
+        #####
+        phase2 = get_phases(t, t[0], period2)
+
+        # PLOT
+        tools = 'pan,wheel_zoom,box_zoom,reset,save'
+        # title = f"Phased LC with \nPeriod={period:.3f} sec and Epoch={lc.date_time[0]}",
+        plot = figure(plot_height=400, plot_width=800, min_border=10, tools=tools)
+        plot.add_layout(Title(text=f"Period={period:.3f} sec and Epoch={lc.date_time[0]}",
+                               align='center'), 'above')
+        plot.add_layout(Title(text="Phased LC with LSP Period",
+                               text_font_size="12pt", align='center'), 'above')
+
+        plot.output_backend = "svg"
+        plot.title.align = 'center'
+        plot.xaxis.axis_label = 'Phase'
+        plot.yaxis.axis_label = "Normalized magnitude"
+        plot.scatter(phase1, mag_norm, marker="o", size=3)
+        p1 = file_html(plot, CDN, "phased_lc")
+
+        # Second plot with Period +/- 3P
+        plot2 = figure(plot_height=400, plot_width=800, min_border=10, tools=tools)
+
+        plot2.add_layout(Title(text=f"Period={period2:.3f} sec and Epoch={lc.date_time[0]}",
+                               align='center'), 'above')
+        plot2.add_layout(Title(text=r"Phased LC with Period defined by PDM method (in borders +/- 3*P_lsp)",
+                               text_font_size="12pt", align='center'), 'above')
+
+        plot2.output_backend = "svg"
+        plot2.title.align = 'center'
+        plot2.xaxis.axis_label = 'Phase'
+        plot2.yaxis.axis_label = "Normalized magnitude"
+        plot2.scatter(phase2, mag_norm, marker="o", size=3)
+        p2 = file_html(plot2, CDN, "phased_lc2")
+
+        return [p1, p2]
 
 
 def plot_lc(lc_id):

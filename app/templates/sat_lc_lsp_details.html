@@ -18,6 +18,18 @@
                         {{ lsp_graph | safe}}
                     </div>
 
+                    {% if ph_graph is not none %}
+                    <br>
+                        {%  for phx in  ph_graph%}
+                            <div style="width:800px; margin-right: auto; margin-left: auto; border-collapse: collapse;">
+                                {{ phx | safe}}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <br>
+                        <p> No Period defined, cant create Phased Curve </p>
+                    {% endif %}
+
                 </div>
                 <br class="clearfix" />
         {% endblock %}
