@@ -799,12 +799,13 @@ def lsp_calc(lc_id=None, lc=None):
         return sorted_pairs[0][1]
 
 
-def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False):
+def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False, detrend=False):
     """
     Args:
         lc_id: id of LC
         return_lc: return LC with parameters for further purposes
         return_period: calculated Period value, or "None"
+        detrend: boolean, de-trend LC mag or not
 
     Returns: Bokeh html plot of LSP Periodogram
              Optionally return also LC and Period value
@@ -812,6 +813,11 @@ def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False):
     lc = Lightcurve.get_by_id(id=lc_id)
     lctime = lc.date_time
     lctime = [x.timestamp() for x in lctime]
+
+    if detrend:
+        # print('detrending...')
+        from statsmodels.tsa.tsatools import detrend
+        lc.mag = detrend(lc.mag, order=2)
 
     if lc.dt < 1:
         max_freq = 0.83 #/ (2 * lc.dt)
