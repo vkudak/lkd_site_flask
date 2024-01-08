@@ -19,6 +19,7 @@ from pdmpy import pdm
 
 from dateutil import parser
 from matplotlib import pyplot as plt
+from statsmodels.tsa.tsatools import detrend as remove_trend
 
 from app.models import Satellite, Lightcurve
 
@@ -815,9 +816,7 @@ def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False, detrend=False):
     lctime = [x.timestamp() for x in lctime]
 
     if detrend:
-        # print('detrending...')
-        from statsmodels.tsa.tsatools import detrend
-        lc.mag = detrend(lc.mag, order=2)
+        lc.mag = remove_trend(lc.mag, order=2)
 
     if lc.dt < 1:
         max_freq = 0.83 #/ (2 * lc.dt)
@@ -961,7 +960,7 @@ def plot_phased_lc(lc, period):
         plot.output_backend = "svg"
         plot.title.align = 'center'
         plot.xaxis.axis_label = 'Phase'
-        plot.yaxis.axis_label = "Normalized magnitude"
+        plot.yaxis.axis_label = "Normalized flux"
         plot.scatter(phase1, mag_norm, marker="o", size=3)
         p1 = file_html(plot, CDN, "phased_lc")
 
@@ -976,7 +975,7 @@ def plot_phased_lc(lc, period):
         plot2.output_backend = "svg"
         plot2.title.align = 'center'
         plot2.xaxis.axis_label = 'Phase'
-        plot2.yaxis.axis_label = "Normalized magnitude"
+        plot2.yaxis.axis_label = "Normalized flux"
         plot2.scatter(phase2, mag_norm, marker="o", size=3)
         p2 = file_html(plot2, CDN, "phased_lc2")
 
