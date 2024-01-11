@@ -941,12 +941,13 @@ def plot_phased_lc(lc, period):
         mag_norm = norm_lc(lc.mag)
         phase1 = get_phases(t, t[0], period)
 
-        # new period search
-        freq, theta = pdm(t, mag_norm,
-                          f_min=1./period/3., f_max=1./period*3.0, delf=1e-5)  # 1e-6 ???
-        period2 = 1 / freq[np.argmin(theta)]
-        #####
-        phase2 = get_phases(t, t[0], period2)
+        if len(mag_norm) > 100:
+            # new period search
+            freq, theta = pdm(t, mag_norm,
+                              f_min=1./period/3., f_max=1./period*3.0, delf=1e-5)  # 1e-6 ???
+            period2 = 1 / freq[np.argmin(theta)]
+            #####
+            phase2 = get_phases(t, t[0], period2)
 
         # PLOT
         tools = 'pan,wheel_zoom,box_zoom,reset,save'
@@ -954,8 +955,12 @@ def plot_phased_lc(lc, period):
         plot = figure(plot_height=400, plot_width=800, min_border=10, tools=tools)
         plot.add_layout(Title(text=f"Period={period:.3f} sec and Epoch={lc.date_time[0]}",
                                align='center'), 'above')
-        plot.add_layout(Title(text="Phased LC with LSP Period",
-                               text_font_size="12pt", align='center'), 'above')
+        if len(mag_norm) < 100:
+            plot.add_layout(Title(text="Phased LC with LSP Period. N_points < 100, no DPM method",
+                                  text_font_size="12pt", align='center'), 'above')
+        else:
+            plot.add_layout(Title(text="Phased LC with LSP Period",
+                                  text_font_size="12pt", align='center'), 'above')
 
         plot.output_backend = "svg"
         plot.title.align = 'center'
@@ -964,22 +969,25 @@ def plot_phased_lc(lc, period):
         plot.scatter(phase1, mag_norm, marker="o", size=3)
         p1 = file_html(plot, CDN, "phased_lc")
 
-        # Second plot with Period +/- 3P
-        plot2 = figure(plot_height=400, plot_width=800, min_border=10, tools=tools)
+        if len(mag_norm) < 100:
+            return [p1, p1]
+        else:
+            # Second plot with Period +/- 3P
+            plot2 = figure(plot_height=400, plot_width=800, min_border=10, tools=tools)
 
-        plot2.add_layout(Title(text=f"Period={period2:.3f} sec and Epoch={lc.date_time[0]}",
-                               align='center'), 'above')
-        plot2.add_layout(Title(text=r"Phased LC with Period defined by PDM method (in borders +/- 3*P_lsp)",
-                               text_font_size="12pt", align='center'), 'above')
+            plot2.add_layout(Title(text=f"Period={period2:.3f} sec and Epoch={lc.date_time[0]}",
+                                   align='center'), 'above')
+            plot2.add_layout(Title(text=r"Phased LC with Period defined by PDM method (in borders +/- 3*P_lsp)",
+                                   text_font_size="12pt", align='center'), 'above')
 
-        plot2.output_backend = "svg"
-        plot2.title.align = 'center'
-        plot2.xaxis.axis_label = 'Phase'
-        plot2.yaxis.axis_label = "Normalized flux"
-        plot2.scatter(phase2, mag_norm, marker="o", size=3)
-        p2 = file_html(plot2, CDN, "phased_lc2")
+            plot2.output_backend = "svg"
+            plot2.title.align = 'center'
+            plot2.xaxis.axis_label = 'Phase'
+            plot2.yaxis.axis_label = "Normalized flux"
+            plot2.scatter(phase2, mag_norm, marker="o", size=3)
+            p2 = file_html(plot2, CDN, "phased_lc2")
 
-        return [p1, p2]
+            return [p1, p2]
 
 
 def plot_lc(lc_id):
