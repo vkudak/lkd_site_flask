@@ -185,8 +185,8 @@ def process_lc_file(file, file_ext, db, app):
                                     dtype={'names': ('time',), 'formats': ('S15',)})
 
                 lctime = [
-                    datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
-                    for x in lctime]
+                    datetime.strptime(sat_st_date + " " + x.decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
+                    for x in lctime[0]]  # lctime is array in list, so we need lctime[0]
                 t0 = lctime[0]
                 lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
                           lctime]  # add DAY after 00:00:00
@@ -231,13 +231,13 @@ def process_lc_file(file, file_ext, db, app):
             tle = fs.readline()[2:] + fs.readline()[2:] + fs.readline()[2:]
 
             sat_st = fs.readline().strip("\n").strip("\r")[2:].strip()[:-1]
-            sat_st_date = sat_st.split()[0]
+            # sat_st_date = sat_st.split()[0]
 
             sat_end = fs.readline().strip("\n").strip("\r")[2:].strip()[:-1]
 
             # Default values
             site_name = "Derenivka"
-            filt = file_ext[3:] # Get filter from file extension if not available in header
+            filt = file_ext[3:]  # Get filter from file extension if not available in header
 
             # Check header
             for line in fs:
