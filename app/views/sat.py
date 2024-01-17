@@ -1,6 +1,7 @@
 import os
 
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify, Response
+from flask import send_file
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import StringField, MultipleFileField, SubmitField, RadioField, IntegerField
@@ -9,7 +10,8 @@ import datetime
 
 from app import cache
 from app.models import Satellite, db, Lightcurve
-from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc
+from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc, \
+    lc_to_file
 
 # FOR PATCH case
 from app.sat_utils import lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat
@@ -153,6 +155,13 @@ def sat_lc_period_plot(lc_id):
     phased_fig = plot_phased_lc(lc, p)
     return render_template("sat_lc_lsp_details.html", lc=lc,
                            lsp_graph=lsp_fig, ph_graph=phased_fig)
+
+
+@sat_bp.route('/sat_download_lc.html/<int:lc_id>', methods=['GET', 'POST'])
+@login_required
+def sat_download_lc(lc_id):
+    mem, filename = lc_to_file(lc_id)
+    return send_file(mem, as_attachment=True, attachment_filename=filename, mimetype='text/csv')
 
 
 @cache.memoize(timeout=300)
@@ -316,20 +325,27 @@ def ajax_file_lc(sat_id):
             for lc in lcs:
                 txt = url_for('sat.sat_lc_plot', lc_id=lc.id)
                 txt_lsp = url_for('sat.sat_lc_period_plot', lc_id=lc.id)
+                txt_dl = url_for('sat.sat_download_lc', lc_id=lc.id)
+                dl_img = "<img src=" + url_for("static", filename="images/download_arrow.png")
+                dl_img += ' alt="HTML tutorial" style="width:20px;height:13px;">'
+                # dl_img += ' alt="HTML tutorial" style="width:15px;height:2px;">'
 
                 if lc.lsp_period is None:
                     period = "Aperiodic"
                 else:
                     period = lc.lsp_period
 
-                minutes = ((len(lc.flux) * lc.dt) / 60.0)
-                m1, m2 = divmod(minutes, 1)
-                m2 = m2 * 60.
-                if m2 < 10:
-                    m2 = "0" + str(int(m2))
-                else:
-                    m2 = str(int(m2))
-                min_sec = f"{int(m1):>3d}:{m2}"
+                minutes = len(lc.flux) * lc.dt
+                min_sec = f"{int(minutes):>3d}"  # seconds
+
+                # minutes = ((len(lc.flux) * lc.dt) / 60.0)
+                # m1, m2 = divmod(minutes, 1)
+                # m2 = m2 * 60.
+                # if m2 < 10:
+                #     m2 = "0" + str(int(m2))
+                # else:
+                #     m2 = str(int(m2))
+                # min_sec = f"{int(m1):>3d}:{m2}"
 
                 data.append({
                     'ut_start': lc.ut_start.strftime("%Y-%m-%d %H:%M:%S"),
@@ -337,9 +353,12 @@ def ajax_file_lc(sat_id):
                     'filter': lc.band,
                     'dt': "%5.3f" % lc.dt,
                     'N': min_sec,
-                    'curve': '<a href=' + txt + '>' + "LC" + '</a>',
+                    'curve': '<a href=' + txt + ' title="Plot">' + "LC" + '</a>',
                     'period': period,
-                    'lsp': '<a href=' + txt_lsp + '>' + "LSP" + '</a>'
+                    'lsp': '<a href=' + txt_lsp + ' title="Periodogram">' + "LSP" + '</a>',
+                    # 'dl': '<a href=' + txt_dl + '>' + "&ddarr;" + '</a>'
+                    'dl': '<a href=' + txt_dl + ' title="Download">' + dl_img + '</a>'
+
                 })
             response = {
                 'draw': draw,

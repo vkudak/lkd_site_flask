@@ -21,7 +21,7 @@ from dateutil import parser
 from matplotlib import pyplot as plt
 from statsmodels.tsa.tsatools import detrend as remove_trend
 
-from app.models import Satellite, Lightcurve
+from app.models import Satellite, Lightcurve, User
 
 
 def del_files_in_folder(folder):
@@ -1093,3 +1093,67 @@ def calc_sat_updated_for_all_sat():
     sats = Satellite.get_all()
     for sat in sats:
         sat.update_updated()
+
+
+def lc_to_file(lc_id):
+    lc = Lightcurve.get_by_id(lc_id)
+
+    lat, lon, elev = None, None, None
+    users = User.get_all()
+    for user in users:
+        if user.site_name.lower() == lc.site.lower():
+            lat = user.site_lat
+            lon = user.site_lon
+            elev = user.site_elev
+
+    txt = ""
+    if lc.tle is not None:
+        txt = f"# TLE:\n"
+        for line in lc.tle.strip("\n").split("\n"):
+            txt += f"# {line}\n"
+    txt += f"# {lc.ut_start}\n# {lc.ut_end}\n"
+    txt += f"# dt = {lc.dt}\n"
+    txt += f"# COSPAR = {lc.sat.cospar}\n# NORAD  = {lc.sat.norad}\n# NAME   = {lc.sat.name}\n"
+    txt += f"# SITE_NAME   = {lc.site}\n"
+
+    if lat is not None:
+        txt += f"# SITE_LAT   = {lat}\n"
+    if lon is not None:
+        txt += f"# SITE_LON   = {lon}\n"
+    if elev is not None:
+        txt += f"# SITE_ELEV  = {elev}\n"
+
+    txt += "#  Date       UT              X          Y         Xerr      Yerr             Flux     Flux_err     "
+    txt += f"mag{lc.band}  mag_err     Az(deg)   El(deg)   Rg(Mm)    filename\n"
+
+    xy_txt = "    000.00000  000.00000   0.00000   0.00000        "
+
+    if lc.mag_err is not None:
+        # phX format
+        for (date_time, flux, flux_err, mag, mag_err, az, el, rg) in (
+                zip(lc.date_time, lc.flux, lc.flux_err, lc.mag, lc.mag_err, lc.az, lc.el, lc.rg)):
+            txt += f"{date_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}{xy_txt}{flux:10.4f}  {flux_err:8.4f}"
+            txt += f"   {mag:6.3f}  {mag_err:6.3f}    {az:8.3f} {el:8.3f}   {rg:8.3f}   filename.fits\n"
+            # fr.write(f"{'{:13.4f}'.format(flux)}  {'{:8.4f}'.format(flux_err)}   {mag:6.3f}  {mag_err:6.3f}    ")
+            # fr.write(f"{Az:8.3f} {El:8.3f}   {Rg:8.3f}   {fit_file}\n")
+    else:
+        # phc format
+        flux_err = 0.0
+        mag_err = 0.0
+        for (date_time, flux, mag, az, el, rg) in (
+                zip(lc.date_time, lc.flux, lc.mag, lc.az, lc.el, lc.rg)):
+            txt += f"{date_time.strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]}{xy_txt}{flux:10.4f}  {flux_err:8.4f}"
+            txt += f"   {mag:6.3f}  {mag_err:6.3f}    {az:8.3f} {el:8.3f}   {rg:8.3f}   filename.fits\n"
+
+    proxy = io.StringIO(txt)
+    mem = io.BytesIO()
+    mem.write(proxy.getvalue().encode('utf-8'))
+    mem.seek(0)
+    proxy.close()
+    st_date = lc.ut_start.strftime('%Y-%m-%d %H:%M:%S.%f')
+    st_date = st_date[:st_date.find(".")]
+    st_date = st_date.replace("-", "")
+    st_date = st_date.replace(" ", "_UT")
+    st_date = st_date.replace(":", "")
+    filename = f"result_{lc.sat.norad}_{st_date}.ph{lc.band}"
+    return mem, filename

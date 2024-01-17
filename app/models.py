@@ -27,6 +27,14 @@ class User(db.Model, UserMixin):
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
     # https://stackoverflow.com/questions/33705697/alembic-integrityerror-column-contains-null-values-when-adding-non-nullable
 
+    @classmethod
+    def get_all(cls):
+        """
+        Return all Users
+        """
+        users = db.session.query(cls).order_by(cls.id).all()
+        return users
+
 
 class Star(db.Model):
     id = db.Column(db.Integer, primary_key=True)
