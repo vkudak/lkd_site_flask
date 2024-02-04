@@ -37,20 +37,14 @@
                 </table>
                     <br>
 
-{#                    <img class="alignleft" src="{{ url_for('static', filename=graph).replace('tmp%5C', 'tmp/') }}"#}
-{#                    width="700" height="400" alt="" />#}
-
-{#                    <div class="alignleft" style="width:800px; border-collapse: collapse;">#}
-{#                        {{ alt_az_graph | safe}}#}
-{#                    </div>#}
-                    <div class="flexcontainer" style="margin-left: 10%">
+                    <div style="display:flex; margin-left: 10%">
                     <div>
                     {{ alt_az_graph | safe}}
                     </div>
 
 
                     <div id="phase_div" style="overflow: hidden; margin-left: 2%; padding: revert">
-                                        <p>    Phase coverage info...</p>
+                        <p>    Phase coverage info...</p>
                         <ol>
                             {% for x in star.observations %}
                                 <li style="font-family: monospace; font-size: 12px;
