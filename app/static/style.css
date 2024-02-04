@@ -591,3 +591,13 @@ samp {
 #eb_table tr {
 	line-height: 15px
 }
+
+.flexcontainer {
+	display: flex;
+}
+
+@media (max-width: 320px) {
+  .flexcontainer {
+    display: block;
+  }
+}

@@ -7,7 +7,7 @@ from wtforms.validators import InputRequired, Length
 from sqlalchemy import case
 
 from app import cache
-from app.star_util import plot_star
+from app.star_util import plot_star_bokeh
 from app.models import Star, db
 
 eb_bp = Blueprint('eb', __name__)
@@ -80,15 +80,18 @@ def eb_list():
 @cache.cached(timeout=100)
 def details(star_id):
     star = Star.get_by_id(star_id)
-    graph_name = plot_star(star, user=current_user)
+    # graph_name = plot_star(star, user=current_user)  # old graph
+    alt_az_fig = plot_star_bokeh(star, user=current_user)
 
     form = AddObsForm()
     if form.validate_on_submit():
         star.add_obs(start_date=form.JD_start.data, end_date=form.JD_end.data)
-        # graph_name = plot_star(star, user=current_user)
-        return render_template('details.html', star=star, graph=graph_name, user=current_user, form=form)
 
-    return render_template('details.html', star=star, graph=graph_name, user=current_user, form=form)
+        # return render_template('details.html', star=star, graph=graph_name, user=current_user, form=form)
+        return render_template('details.html', star=star, alt_az_graph=alt_az_fig, user=current_user, form=form)
+
+    # return render_template('details.html', star=star, graph=graph_name, user=current_user, form=form)
+    return render_template('details.html', star=star, alt_az_graph=alt_az_fig, user=current_user, form=form)
 
 
 # @eb_bp.route('/add_obs.html/<star_id>', methods=['GET', 'POST'])

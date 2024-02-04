@@ -1,17 +1,16 @@
 import csv
-import sys
 import os
-import matplotlib.pyplot as plt
 import ephem
 import numpy as np
 from datetime import datetime, timedelta
-import time
 import math
-from pylab import rcParams
-import matplotlib.dates as mdates
 import json
-import zipfile
-rcParams['figure.figsize'] = 10, 6
+
+from bokeh.layouts import gridplot
+from bokeh.models import DatetimeTickFormatter, HoverTool, LinearAxis, Range1d
+from bokeh.plotting import figure
+from bokeh.resources import CDN
+from bokeh.embed import file_html
 
 
 def get_julian_datetime(date):
@@ -267,11 +266,13 @@ def read_stars_from_db(user, db_stars):
         row["id"] = star.id
 
         if row["Phase"] is not None:
-            row["Phase"] = [(x,
-                             (t2phases([y[0]], row["Period"], row["Epoch"])[0], t2phases([y[1]], row["Period"], row["Epoch"])[0]),
-                             y[1] - y[0],
-                             )
-                            for x, y in row["Phase"].items()]
+            row["Phase"] = [
+                (x,
+                 (t2phases([y[0]], row["Period"], row["Epoch"])[0],
+                  t2phases([y[1]], row["Period"], row["Epoch"])[0]),
+                 y[1] - y[0],
+                 ) for x, y in row["Phase"].items()
+            ]
 
             for i in range(0, len(row["Phase"])):
                 if row["Phase"][i][2] >= row["Period"]:
@@ -298,127 +299,124 @@ def date_linspace(start, end, steps):
     return res
 
 
-def plot4(star, user):
-    # name, ra, dec = star["Name"], star["RA"], star["DEC"]
-    name = star["Name"]
-
-    site = ephem.Observer()
-    today = datetime.today()
-    site.date = datetime(today.year, today.month, today.day, 23, 59, 0)  # datetime.now()
-    site.lat = str(user.site_lat)  # "48.63" #loc.lat
-    site.lon = str(user.site_lon)  # "22.33" #loc.lon
-
-    obj = ephem.FixedBody()
-    obj.name = name
-    obj._ra = ephem.hours(star["RA"].replace("h", ":").replace("m", ":")[:-1])
-    obj._dec = ephem.degrees(star["DEC"].replace("d", ":").replace("m", ":")[:-1])
-    obj.compute(site)
-
-    site.horizon = '-12'
-    sun_set = site.previous_setting(ephem.Sun(), use_center=True).datetime()
-    sun_rise = site.next_rising(ephem.Sun(), use_center=True).datetime()
-
-    site.horizon = '25'
-    try:
-        obj_rise = site.previous_rising(obj).datetime()
-        obj_set = site.next_setting(obj).datetime()
-    except ephem.AlwaysUpError:
-        obj_rise = "alw up"
-        obj_set = "alw up"
-
-    # make t_delta
-    counts = 300
-    # print(obj_rise, obj_set)
-    # print(sun_set, sun_rise)
-    if obj_rise != "alw up":
-        if obj_rise >= sun_set:
-            if obj_set <= sun_rise:
-                t_delta = date_linspace(obj_rise, obj_set, counts)
-            else:
-                t_delta = date_linspace(obj_rise, sun_rise, counts)
-        else:
-            t_delta = date_linspace(sun_set, sun_rise, counts)
-    else:
-        t_delta = date_linspace(sun_set, sun_rise, counts)
-
-    moon_alt = []
-    obj_alt = []
-    obj_az = []
-    dt_jd = []
-
-    for dt in t_delta:
-        site.date = dt  # '1984/5/30 16:22:56'  # 12:22:56 EDT
-        moon = ephem.Moon()
-        moon.compute(site)
-        obj.compute(site)
-        moon_alt.append(math.degrees(float(moon.alt)))
-        obj_az.append(math.degrees(float(obj.az)))
-        obj_alt.append(math.degrees(float(obj.alt)))
-        dt_jd.append(get_julian_datetime(dt))
-
-    t_phase = t2phases(dt_jd, star["Period"], float(star["Epoch"]))
-    t_phase = np.array(t_phase)
-    obj_alt = np.array(obj_alt)
-    obj_az = np.array(obj_az)
-    moon_alt = np.array(moon_alt)
-    t_delta = np.array(t_delta)
-    ####PLOT
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-
-    ax1.plot(t_delta, moon_alt, color="y", ls='--', label='Moon')
-    mappable = ax1.scatter(t_delta, obj_alt, c=obj_az, label=name, lw=0, s=8, cmap='viridis')
-
-    myfmt = mdates.DateFormatter('%H:%M')  # %Y-%m-%d
-    ax1.xaxis.set_major_formatter(myfmt)
-    plt.gcf().autofmt_xdate()
-
-    # Azimuth axis----------------------------------
-    ax2 = ax1.twiny()
-    ax2.set_xlim(ax1.get_xlim())
-    numElems = 10  # 10 elements evenly spaced on ax2 on the top
-    tt_idx = np.round(np.linspace(0, len(t_delta) - 1, numElems)).astype(int)
-    t_delta = np.array(t_delta)
-    phs = ["%1.2f" % x for x in t_phase]
-    phs = np.array(phs)
-
-    ax2.set_xticks(t_delta[tt_idx])
-    ax2.set_xticklabels(phs[tt_idx])
-    ax2.set_xlabel(r"Phase")
-    ax2.tick_params(axis='x', which='major', pad=0)
-    # -------------------------------------------------
-
-    ax2.plot(t_phase, np.ones(len(t_phase)))
-
-    plt.colorbar(mappable, ax=ax1).set_label('Azimuth [deg]')
-    # plt.legend(loc='upper left')
-
-    ax1.set_ylim(25, max(obj_alt) + 3)
-    ax1.legend()
-    ax1.set_xlabel('Time (UTC) \n' \
-                   + t_delta[0].strftime("%Y-%m-%d") + " -- " + t_delta[-1].strftime("%Y-%m-%d"))
-    ax1.set_ylabel('Altitude [deg]')
-
-    # plt.subplots_adjust(top=0.88)  # to leave the title and not cut it !
-
-    if not os.path.exists(os.path.join("app", "static", "tmp")):
-        os.mkdir(os.path.join("app", "static", "tmp"))
-    name2 = name + "_" + str(time.time()) + ".png"
-    name3 = f'{os.path.join("app", "static", "tmp", name2)}'
-
-    for gfile in os.listdir(os.path.join("app", "static", "tmp")):
-        # if gfile.startswith(name + '_'):  # not to remove other images
-        #     os.remove(os.path.join("static", "tmp", gfile))
-        os.remove(os.path.join("app", "static", "tmp", gfile))
-
-    fig.savefig(name3, bbox_inches='tight')
-    # plt.clf()
-    # return f'{os.path.join("tmp", name2)}'
-    return os.path.join("tmp", name2)
-    ############
+# def plot_star(star, user):
+#     site = ephem.Observer()
+#     today = datetime.today()
+#     site.date = datetime(today.year, today.month, today.day, 23, 59, 0)  # datetime.now()
+#     site.lat = str(user.site_lat)  # "48.63" #loc.lat
+#     site.lon = str(user.site_lon)  # "22.33" #loc.lon
+#
+#     obj = ephem.FixedBody()
+#     obj.name = star.star_name
+#     obj._ra = ephem.hours(star.ra.replace("h", ":").replace("m", ":")[:-1])
+#     obj._dec = ephem.degrees(star.dec.replace("d", ":").replace("m", ":")[:-1])
+#     obj.compute(site)
+#
+#     site.horizon = '-12'
+#     sun_set = site.previous_setting(ephem.Sun(), use_center=True).datetime()
+#     sun_rise = site.next_rising(ephem.Sun(), use_center=True).datetime()
+#
+#     site.horizon = '25'
+#     try:
+#         obj_rise = site.previous_rising(obj).datetime()
+#         obj_set = site.next_setting(obj).datetime()
+#     except ephem.AlwaysUpError:
+#         obj_rise = "alw up"
+#         obj_set = "alw up"
+#
+#     # make t_delta
+#     counts = 300
+#     # print(obj_rise, obj_set)
+#     # print(sun_set, sun_rise)
+#     if obj_rise != "alw up":
+#         if obj_rise >= sun_set:
+#             if obj_set <= sun_rise:
+#                 t_delta = date_linspace(obj_rise, obj_set, counts)
+#             else:
+#                 t_delta = date_linspace(obj_rise, sun_rise, counts)
+#         else:
+#             t_delta = date_linspace(sun_set, sun_rise, counts)
+#     else:
+#         t_delta = date_linspace(sun_set, sun_rise, counts)
+#
+#     moon_alt = []
+#     obj_alt = []
+#     obj_az = []
+#     dt_jd = []
+#
+#     for dt in t_delta:
+#         site.date = dt  # '1984/5/30 16:22:56'  # 12:22:56 EDT
+#         moon = ephem.Moon()
+#         moon.compute(site)
+#         obj.compute(site)
+#         moon_alt.append(math.degrees(float(moon.alt)))
+#         obj_az.append(math.degrees(float(obj.az)))
+#         obj_alt.append(math.degrees(float(obj.alt)))
+#         dt_jd.append(get_julian_datetime(dt))
+#
+#     t_phase = t2phases(dt_jd, star.period, float(star.epoch))
+#     t_phase = np.array(t_phase)
+#     obj_alt = np.array(obj_alt)
+#     obj_az = np.array(obj_az)
+#     moon_alt = np.array(moon_alt)
+#     t_delta = np.array(t_delta)
+#     ####PLOT
+#     fig = plt.figure()
+#     ax1 = fig.add_subplot(111)
+#
+#     ax1.plot(t_delta, moon_alt, color="y", ls='--', label='Moon')
+#     mappable = ax1.scatter(t_delta, obj_alt, c=obj_az, label=star.star_name, lw=0, s=8, cmap='viridis')
+#
+#     myfmt = mdates.DateFormatter('%H:%M')  # %Y-%m-%d
+#     ax1.xaxis.set_major_formatter(myfmt)
+#     plt.gcf().autofmt_xdate()
+#
+#     # Azimuth axis----------------------------------
+#     ax2 = ax1.twiny()
+#     ax2.set_xlim(ax1.get_xlim())
+#     numElems = 10  # 10 elements evenly spaced on ax2 on the top
+#     tt_idx = np.round(np.linspace(0, len(t_delta) - 1, numElems)).astype(int)
+#     t_delta = np.array(t_delta)
+#     phs = ["%1.2f" % x for x in t_phase]
+#     phs = np.array(phs)
+#
+#     ax2.set_xticks(t_delta[tt_idx])
+#     ax2.set_xticklabels(phs[tt_idx])
+#     ax2.set_xlabel(r"Phase")
+#     ax2.tick_params(axis='x', which='major', pad=0)
+#     # -------------------------------------------------
+#
+#     ax2.plot(t_phase, np.ones(len(t_phase)))
+#
+#     plt.colorbar(mappable, ax=ax1).set_label('Azimuth [deg]')
+#     # plt.legend(loc='upper left')
+#
+#     ax1.set_ylim(25, max(obj_alt) + 3)
+#     ax1.legend()
+#     ax1.set_xlabel('Time (UTC) \n' \
+#                    + t_delta[0].strftime("%Y-%m-%d") + " -- " + t_delta[-1].strftime("%Y-%m-%d"))
+#     ax1.set_ylabel('Altitude [deg]')
+#
+#     # plt.subplots_adjust(top=0.88)  # to leave the title and not cut it !
+#
+#     if not os.path.exists(os.path.join("app", "static", "tmp")):
+#         os.mkdir(os.path.join("app", "static", "tmp"))
+#     name2 = star.star_name + "_" + str(time.time()) + ".png"
+#     name3 = f'{os.path.join("app", "static", "tmp", name2)}'
+#
+#     for gfile in os.listdir(os.path.join("app", "static", "tmp")):
+#         # if gfile.startswith(name + '_'):  # not to remove other images
+#         #     os.remove(os.path.join("static", "tmp", gfile))
+#         os.remove(os.path.join("app", "static", "tmp", gfile))
+#
+#     fig.savefig(name3, bbox_inches='tight')
+#     # plt.clf()
+#     # return f'{os.path.join("tmp", name2)}'
+#     return os.path.join("tmp", name2)
+#     ############
 
 
-def plot_star(star, user):
+def plot_star_bokeh(star, user):
     site = ephem.Observer()
     today = datetime.today()
     site.date = datetime(today.year, today.month, today.day, 23, 59, 0)  # datetime.now()
@@ -479,64 +477,81 @@ def plot_star(star, user):
     obj_az = np.array(obj_az)
     moon_alt = np.array(moon_alt)
     t_delta = np.array(t_delta)
-    ####PLOT
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
 
-    ax1.plot(t_delta, moon_alt, color="y", ls='--', label='Moon')
-    mappable = ax1.scatter(t_delta, obj_alt, c=obj_az, label=star.star_name, lw=0, s=8, cmap='viridis')
+    tools = 'pan,wheel_zoom,box_zoom,reset,save'
+    title = f"EB system: {star.star_name}"
 
-    myfmt = mdates.DateFormatter('%H:%M')  # %Y-%m-%d
-    ax1.xaxis.set_major_formatter(myfmt)
-    plt.gcf().autofmt_xdate()
+    plot = figure(title=title, plot_height=400, plot_width=800,
+                  x_axis_type='datetime', min_border=10,
+                  y_range=(min(obj_alt)-10, max(obj_alt)+10),
+                  tools=tools
+                  )
 
-    # Azimuth axis----------------------------------
-    ax2 = ax1.twiny()
-    ax2.set_xlim(ax1.get_xlim())
-    numElems = 10  # 10 elements evenly spaced on ax2 on the top
-    tt_idx = np.round(np.linspace(0, len(t_delta) - 1, numElems)).astype(int)
-    t_delta = np.array(t_delta)
-    phs = ["%1.2f" % x for x in t_phase]
-    phs = np.array(phs)
+    plot.output_backend = "svg"
+    plot.title.align = 'center'
 
-    ax2.set_xticks(t_delta[tt_idx])
-    ax2.set_xticklabels(phs[tt_idx])
-    ax2.set_xlabel(r"Phase")
-    ax2.tick_params(axis='x', which='major', pad=0)
-    # -------------------------------------------------
+    plot.yaxis.axis_label = r'Elevation [deg]'  # m_st
+    # plot.xaxis.axis_label = r"Time [UT]"
 
-    ax2.plot(t_phase, np.ones(len(t_phase)))
+    plot.line(t_delta, obj_alt, color='black', line_width=2.)
+    plot.line(t_delta, moon_alt, color='yellow', line_width=2.)
 
-    plt.colorbar(mappable, ax=ax1).set_label('Azimuth [deg]')
-    # plt.legend(loc='upper left')
+    plot.xaxis.ticker.desired_num_ticks = 10
+    plot.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                                 minutes=["%H:%M:%S"],
+                                                 minsec=["%H:%M:%S"],
+                                                 hours=["%H:%M:%S"])
 
-    ax1.set_ylim(25, max(obj_alt) + 3)
-    ax1.legend()
-    ax1.set_xlabel('Time (UTC) \n' \
-                   + t_delta[0].strftime("%Y-%m-%d") + " -- " + t_delta[-1].strftime("%Y-%m-%d"))
-    ax1.set_ylabel('Altitude [deg]')
+    t_ph_str = [f"{x:.2f}" for x in t_phase]
+    t_ph_str = t_ph_str[0::20]  # each 20th point to display
 
-    # plt.subplots_adjust(top=0.88)  # to leave the title and not cut it !
+    # exta x axis
+    plot.extra_x_ranges['sec_x_axis'] = Range1d(0, len(t_ph_str))
+    ax2 = LinearAxis(x_range_name="sec_x_axis", axis_label="phase")
+    plot.add_layout(ax2, 'above')
 
-    if not os.path.exists(os.path.join("app", "static", "tmp")):
-        os.mkdir(os.path.join("app", "static", "tmp"))
-    name2 = star.star_name + "_" + str(time.time()) + ".png"
-    name3 = f'{os.path.join("app", "static", "tmp", name2)}'
+    # set ticker to avoid wrong formatted labels while zooming
+    plot.above[0].ticker = list(range(0, len(t_ph_str)))
+    # overwrite labels
+    plot.above[0].major_label_overrides = {key: item for key, item in zip(range(0, len(t_ph_str)), t_ph_str)}
+    # plot.above[0].ticker.desired_num_ticks = 10
 
-    for gfile in os.listdir(os.path.join("app", "static", "tmp")):
-        # if gfile.startswith(name + '_'):  # not to remove other images
-        #     os.remove(os.path.join("static", "tmp", gfile))
-        os.remove(os.path.join("app", "static", "tmp", gfile))
+    hover = HoverTool(
+        tooltips=[
+            ('time', '@x{%H:%M:%S.%3N}'),
+            ('el/az', '@y'),
+            # ('ph', '@sec_x_axis'),
+        ],
+        formatters={
+            '@x': 'datetime',
+            '@y': 'numeral',
+            # '@sec_x_axis': 'printf'
+        },
+        mode='mouse'
+    )
+    plot.add_tools(hover)
+    #####
 
-    fig.savefig(name3, bbox_inches='tight')
-    # plt.clf()
-    # return f'{os.path.join("tmp", name2)}'
-    return os.path.join("tmp", name2)
-    ############
+    p2 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
+                y_axis_location="left", x_axis_type='datetime', tools=tools)
+    p2.output_backend = "svg"
+    p2.yaxis.axis_label = r"Azimuth [deg]"
+    p2.xaxis.axis_label = r"Time [UT]"
+    p2.line(t_delta, obj_az, color='black', line_width=2.)
+    p2.xaxis.ticker.desired_num_ticks = 10
+    p2.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
+                                               minutes=["%H:%M:%S"],
+                                               minsec=["%H:%M:%S"],
+                                               hours=["%H:%M:%S"])
+    p2.add_tools(hover)
+
+    layout = gridplot([[plot], [p2]], toolbar_options=dict(logo=None))
+    html = file_html(layout, CDN, "EB system AltAz plot")
+    return html
 
 
 def getListOfFiles(dirName):
-    # create a list of file and sub directories
+    # create a list of file and subdirectories
     # names in the given directory
     listOfFile = os.listdir(dirName)
     allFiles = list()
@@ -551,478 +566,4 @@ def getListOfFiles(dirName):
             allFiles.append(fullPath)
 
     return allFiles
-
-
-def read_sat_files(dir):
-    """
-    dir
-        path: path to db_sat_phot zip archive
-        # ----- absolut path to folder with phc, phR files
-    Returns:
-        list of dict with records
-    """
-    sat_db = []
-    ext = [".phc", ".phR"]
-
-    with zipfile.ZipFile(os.path.join(dir, 'db_sat_phot.zip')) as myzip:
-        for file in myzip.namelist():
-            # read the file if its file and ext is phc, phR
-            # print(file)
-            if not os.path.isdir(file) and file.endswith(tuple(ext)):
-                ###########################################################################
-                if file.endswith(".phc"):
-                    typ = "phc"
-                    sat_r = {}
-                    with myzip.open(file) as fs:
-                        sat_st = fs.readline().decode("UTF-8").strip("\n").strip("\r")
-                        sat_st_date = sat_st.split()[0]
-                        sat_end = fs.readline().decode("UTF-8").strip("\n").strip("\r")
-                        for line in fs:
-                            line = line.decode("UTF-8")
-                            if line[:9] == "COSPAR ID":
-                                cospar = line.split("=")[1].strip().strip("\n").strip("\r")
-                            if line[:8] == "NORAD ID":
-                                norad = int(line.split("=")[1].strip())
-                            if line[:4] == "NAME":
-                                name = line.split("=")[1].strip().strip("\n").strip("\r")
-                            if line[:2] == "dt":
-                                dt = line.split("=")[1].strip().strip("\n").strip("\r")
-                        fs.seek(0)
-                        try:
-                            impB, impV, fonB, fonV, mB, mV, az, el, rg = np.loadtxt(fs, unpack=True,
-                                                                                    skiprows=7, usecols=(
-                                1, 2, 3, 4, 5, 6, 7, 8, 9))
-                            fs.seek(0)
-                            lctime = np.loadtxt(fs, unpack=True, skiprows=7, usecols=(0,),
-                                                dtype={'names': ('time',), 'formats': ('S15',)})
-
-                            lctime = [
-                                datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
-                                for x in lctime]
-                            t0 = lctime[0]
-                            lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
-                                      lctime]  # add DAY after 00:00:00
-
-                            # print(lctime)
-
-                            sat_find_ind = next((i for i, item in enumerate(sat_db) if item["norad"] == norad),
-                                                None)
-
-                            if sat_find_ind is not None:
-
-                                sat_db[sat_find_ind]["lc_list"].append([sat_st, sat_end, dt, lctime,
-                                                                        impB, impV,
-                                                                        fonB, fonV,
-                                                                        mB, mV,
-                                                                        az, el, rg, typ])
-                            else:
-                                sat_r["norad"] = norad
-                                sat_r["cospar"] = cospar
-                                sat_r["name"] = name
-                                sat_r["lc_list"] = [[sat_st, sat_end, dt, lctime, impB, impV,
-                                                     fonB, fonV, mB, mV,
-                                                     az, el, rg, typ]]
-                                sat_db.append(sat_r)
-                        except Exception as e:
-                            print(e)
-                            print("bed format PHC in file =", file)
-                            pass
-
-                elif file.endswith(".phR"):
-                    typ = "phR"
-                    sat_r = {}
-                    with myzip.open(file) as fs:
-                        fs.readline()
-                        fs.readline()
-                        fs.readline()
-                        fs.readline()
-                        sat_st = fs.readline().decode("UTF-8").strip("\n").strip("\r")[2:].strip()[:-1]
-                        sat_st_date = sat_st.split()[0]
-
-                        sat_end = fs.readline().decode("UTF-8").strip("\n").strip("\r")[2:].strip()[:-1]
-                        # print("sat_st = ", sat_st)
-                        # print("sat_end = ", sat_end)
-
-                        for line in fs:
-                            l = line.decode("UTF-8").split(" = ")
-                            if l[0] == "# COSPAR":
-                                cospar = l[1].strip("\n").strip("\r")
-                            if l[0] == "# NORAD ":
-                                norad = int(l[1])
-                            if l[0] == "# NAME  ":
-                                name = l[1].strip("\n").strip("\r")
-                            if l[0] == "# dt":
-                                dt = l[1].strip("\n").strip("\r")
-                        fs.seek(0)
-                        try:
-                            m, merr, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
-                                                             usecols=(8, 9, 10, 11, 12))
-                            fs.seek(0)
-                            lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
-                                                dtype={'names': ('time',), 'formats': ('S14',)})
-                            lctime = [
-                                datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
-                                for x in lctime]
-                            t0 = lctime[0]
-                            lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
-                                      lctime]  # add DAY after 00:00:00
-
-                            sat_find_ind = next((i for i, item in enumerate(sat_db) if item["norad"] == norad),
-                                                None)
-
-                            if sat_find_ind is not None:
-
-                                sat_db[sat_find_ind]["lc_list"].append([sat_st, sat_end, dt, lctime,
-                                                                        m, merr, az, el, rg, typ])
-                            else:
-                                sat_r["norad"] = norad
-                                sat_r["cospar"] = cospar
-                                sat_r["name"] = name
-                                sat_r["lc_list"] = [[sat_st, sat_end, dt, lctime, m, merr, az, el, rg, typ]]
-                                sat_db.append(sat_r)
-                        except Exception as e:
-                            # if str(e) == "list index out of range":   # no merr
-                            # print(e.__class__.__name__)
-                            # print(type(e.__class__.__name__))
-                            # print(e.__class__ is IndexError)
-                            if e.__class__ is IndexError:  # no merr
-                                fs.seek(0)
-                                m, az, el, rg = np.loadtxt(fs, unpack=True, skiprows=11,
-                                                                 usecols=(7, 8, 9, 10))
-                                fs.seek(0)
-                                lctime = np.loadtxt(fs, unpack=True, skiprows=11, usecols=(1,),
-                                                    dtype={'names': ('time',), 'formats': ('S14',)})
-                                lctime = [
-                                    datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f")
-                                    for x in lctime]
-                                t0 = lctime[0]
-                                lctime = [x if t0 - x < timedelta(hours=2) else x + timedelta(days=1) for x in
-                                          lctime]  # add DAY after 00:00:00
-
-                                sat_find_ind = next((i for i, item in enumerate(sat_db) if item["norad"] == norad),
-                                                    None)
-
-                                if sat_find_ind is not None:
-
-                                    sat_db[sat_find_ind]["lc_list"].append([sat_st, sat_end, dt, lctime,
-                                                                            m, az, el, rg, typ])
-                                else:
-                                    sat_r["norad"] = norad
-                                    sat_r["cospar"] = cospar
-                                    sat_r["name"] = name
-                                    sat_r["lc_list"] = [[sat_st, sat_end, dt, lctime, m, az, el, rg, typ]]
-                                    sat_db.append(sat_r)
-                            else:
-                                # print(e.__class__.__name__)
-                                print("Error = ", e, e.__class__.__name__)
-                                print("Bed format PHR in file =", file)
-                            pass
-
-    ### SORT sat_db by sat["lc_list"][0] (sat_st)  ###
-    if len(sat_db) > 0:
-        sat_db = sorted(sat_db, key=lambda k: k["norad"])
-        for z in range(0, len(sat_db)):
-            sat_db[z]["lc_list"] = sorted(sat_db[z]["lc_list"], reverse=True, key=lambda k: k[0])  # [0] = sat_st
-    ##################################################
-
-    return sat_db
-    ####################################################################
-
-    # #############################old func without zip read ##############################################
-    # if os.path.exists(dir):
-    #     files = getListOfFiles(dir)
-    #     files = [file for file in files if file.endswith(tuple(ext))]
-    #     for file in files:
-    #         # print(file)
-    #         if file.endswith("phc"):
-    #             typ = "phc"
-    #             sat_r = {}
-    #             with open(file) as fs:
-    #                 sat_st = fs.readline().strip("\n")
-    #                 sat_st_date = sat_st.split()[0]
-    #                 sat_end = fs.readline().strip("\n")
-    #                 for line in fs:
-    #                     if line[:9] == "COSPAR ID":
-    #                         cospar = line.split("=")[1].strip()
-    #                     if line[:8] == "NORAD ID":
-    #                         norad = int(line.split("=")[1].strip())
-    #                     if line[:4] == "NAME":
-    #                         name = line.split("=")[1].strip()
-    #                     if line[:2] == "dt":
-    #                         dt = line.split("=")[1].strip()
-    #
-    #             try:
-    #                 impB, impV, fonB, fonV, mB, mV, az, el, rg = np.loadtxt(file, unpack=True,
-    #                                                                         skiprows=7, usecols=(1, 2, 3, 4, 5, 6, 7, 8, 9))
-    #                 lctime = np.loadtxt(file, unpack=True, skiprows=7, usecols=(0,),
-    #                                   dtype={'names': ('time',), 'formats': ('S15',)})
-    #                 lctime = [datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
-    #                 t0 = lctime[0]
-    #                 lctime = [x if t0-x < timedelta(hours=2) else x + timedelta(days=1) for x in lctime]  # add DAY after 00:00:00
-    #
-    #                 # print(lctime)
-    #
-    #                 sat_find_ind = next((i for i, item in enumerate(sat_db) if item["norad"] == norad), None)
-    #
-    #                 if sat_find_ind is not None:
-    #
-    #                     sat_db[sat_find_ind]["lc_list"].append([sat_st, sat_end, dt, lctime,
-    #                                                             impB, impV,
-    #                                                             fonB, fonV,
-    #                                                             mB, mV,
-    #                                                             az, el, rg, typ])
-    #                 else:
-    #                     sat_r["norad"] = norad
-    #                     sat_r["cospar"] = cospar
-    #                     sat_r["name"] = name
-    #                     sat_r["lc_list"] = [[sat_st, sat_end, dt, lctime, impB, impV,
-    #                                          fonB, fonV, mB, mV,
-    #                                          az, el, rg, typ]]
-    #                     sat_db.append(sat_r)
-    #             except Exception as e:
-    #                 print(e)
-    #                 print("bed format PHC in file =", file)
-    #                 pass
-    #
-    #         elif file.endswith(".phR"):
-    #             typ = "phR"
-    #             sat_r = {}
-    #             with open(file) as fs:
-    #                 fs.readline()
-    #                 fs.readline()
-    #                 fs.readline()
-    #                 fs.readline()
-    #                 sat_st = fs.readline().strip("\n")[2:].strip()[:-1]
-    #                 sat_st_date = sat_st.split()[0]
-    #
-    #                 sat_end = fs.readline().strip("\n")[2:].strip()[:-1]
-    #                 # print("sat_st = ", sat_st)
-    #                 # print("sat_end = ", sat_end)
-    #
-    #                 for line in fs:
-    #                     l = line.split(" = ")
-    #                     if l[0] == "# COSPAR":
-    #                         cospar = l[1]
-    #                     if l[0] == "# NORAD ":
-    #                         norad = int(l[1])
-    #                     if l[0] == "# NAME  ":
-    #                         name = l[1]
-    #                     if l[0] == "# dt":
-    #                         dt = l[1].strip("\n")
-    #                 # print("norad = ", norad)
-    #
-    #             try:
-    #                 m, merr, az, el, rg = np.loadtxt(file, unpack=True, skiprows=11, usecols=(8, 9, 10, 11, 12))
-    #                 lctime = np.loadtxt(file, unpack=True, skiprows=11, usecols=(1,),
-    #                                   dtype={'names': ('time',), 'formats': ('S14',)})
-    #                 lctime = [datetime.strptime(sat_st_date + " " + x[0].decode('UTF-8'), "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
-    #                 t0 = lctime[0]
-    #                 lctime = [x if t0-x < timedelta(hours=2) else x + timedelta(days=1) for x in lctime]  # add DAY after 00:00:00
-    #
-    #                 # print(lctime)
-    #
-    #                 sat_find_ind = next((i for i, item in enumerate(sat_db) if item["norad"] == norad), None)
-    #
-    #                 if sat_find_ind is not None:
-    #
-    #                     sat_db[sat_find_ind]["lc_list"].append([sat_st, sat_end, dt, lctime,
-    #                                                             m, merr, az, el, rg, typ])
-    #                     # print("add phR rec2 ", norad)
-    #                 else:
-    #                     sat_r["norad"] = norad
-    #                     sat_r["cospar"] = cospar
-    #                     sat_r["name"] = name
-    #                     sat_r["lc_list"] = [[sat_st, sat_end, dt, lctime, m, merr, az, el, rg, typ]]
-    #                     sat_db.append(sat_r)
-    #                     # print("add phR rec ", norad)
-    #             except Exception as e:
-    #                 print(e)
-    #                 print("bed format PHR in file =", file)
-    #                 pass
-    #
-    #
-    #     ### SORT sat_db by sat["lc_list"][0] (sat_st)  ###
-    #     if len(sat_db) > 0:
-    #         sat_db = sorted(sat_db, key=lambda k: k["norad"])
-    #         for z in range(0, len(sat_db)):
-    #             sat_db[z]["lc_list"] = sorted(sat_db[z]["lc_list"], key=lambda k: k[0])  # [0] = sat_st
-    #     ##################################################
-    #
-    #     return sat_db
-    # else:
-    #     return None
-    # ####################################################################
-
-
-def plot_ccd_lc(sat, lc_index):
-    plt.gcf()
-    plt.clf()
-    filt = "R"
-    grid = True
-    lc = sat["lc_list"][lc_index]
-    cospar, norad, name, dt = sat["cospar"], sat["norad"], sat["name"], lc[2]
-    if len(lc) == 10:
-        mR, merr, Az, El = lc[4], lc[5], lc[6], lc[7]
-    else:
-        mR, Az, El = lc[4], lc[5], lc[6]
-
-    date_time = lc[3]
-
-    ## fig im MAG
-    plt.rcParams['figure.figsize'] = [12, 6]
-    dm = max(mR) - min(mR)
-    dm = dm * 0.1
-    plt.axis([min(date_time), max(date_time), max(mR) + dm, min(mR) - dm])
-
-    if len(lc) == 10:
-        plt.errorbar(date_time, mR, yerr=merr, fmt='xr-', capsize=2, linewidth=0.5, fillstyle="none", markersize=3, ecolor="k")
-    else:
-        plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3)
-    # plt.errorbar(date_time, mR, yerr=merr, fmt='xr-', capsize=2, linewidth=0.5, fillstyle="none", markersize=3)
-    # plt.plot(date_time, mR, "xr-", linewidth=0.5, fillstyle="none", markersize=3) without errors
-
-    # d, t = str(date_time[0]).split(" ")
-    # plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n Date=%s  UT=%s   dt=%s  Filter=%s" % (
-        # name, norad, cospar, d, t, str(dt).strip("\n"), filt), pad=6, fontsize=12)
-
-    plt.title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n LC start=%s  dt=%s  Filter=%s" % (
-        name, norad, cospar, lc[0], str(dt).strip("\n"), filt), pad=6, fontsize=12)
-
-    plt.ylabel(r'$m_{st}$')
-    plt.xlabel('UT')
-    ax = plt.gca()
-
-    # Azimuth axis----------------------------------
-    ax2 = ax.twiny()
-    ax2.set_xlim(ax.get_xlim())
-    numElems = 6
-    tt_idx = np.round(np.linspace(0, len(date_time) - 1, numElems)).astype(int)
-    Tt2 = np.array(date_time)
-    Az2 = np.array(Az)
-    El2 = np.array(El)
-
-    # Az2s = ["%3.2f" % Azt for Azt in Az2]
-    Az2s = []
-    Tt2s = []
-    for kk in range(0, len(Az2)):
-        azt = Az2[kk]
-        elt = El2[kk]
-        t = Tt2[kk]
-        Az2s.append("%3.1f; %3.1f" % (azt, elt))
-        Tt2s.append(t.strftime("%H:%M:%S"))
-    Az2s = np.array(Az2s)
-    ax2.set_xticks(Tt2[tt_idx])  # new_tick_locations
-    ax2.set_xticklabels(Az2s[tt_idx], fontsize=8)
-    ax2.set_xlabel(r"Az;h [deg]", fontsize=8)
-    ax2.tick_params(axis='x', which='major', pad=0)
-
-    Tt2s = np.array(Tt2s)
-    ax.set_xticks(Tt2[tt_idx])  # new_tick_locations
-    ax.set_xticklabels(Tt2s[tt_idx], fontsize=10)
-
-    if grid:
-        ax.xaxis.grid()
-        ax.yaxis.grid()
-    # ----------------------------------------------------
-
-    if not os.path.exists(os.path.join("static", "tmp_sat")):
-        os.mkdir(os.path.join("static", "tmp_sat"))
-    name2 = name + "_" + str(time.time()) + ".png"
-    name3 = f'{os.path.join("static", "tmp_sat", name2)}'
-
-    for gfile in os.listdir(os.path.join("static", "tmp_sat")):
-        # if gfile.startswith(name + '_'):  # not to remove other images
-        #     os.remove(os.path.join("static", "tmp", gfile))
-        os.remove(os.path.join("static", "tmp_sat", gfile))
-
-    plt.savefig(name3, bbox_inches='tight')
-    plt.gcf()
-    return os.path.join("tmp_sat", name2)
-
-
-def plot_sat_lc(sat, lc_index):
-    NAME = sat["name"]
-    NORAD = sat["norad"]
-    COSPAR = sat["cospar"]
-
-    lc = sat["lc_list"][lc_index]
-
-    Tt = lc[3]
-    # Tt = [datetime.strptime(t, '%H:%M:%S.%f') for t in Tt]
-    Tmin = min(Tt)
-    Tmax = max(Tt)
-    mB = lc[8]
-    mV = lc[9]
-    maxB, minB = max(lc[8]), min(lc[8])
-    maxV, minV = max(lc[9]), min(lc[9])
-    Az = lc[10]
-    El = lc[11]
-    miny = max(maxB, maxV)
-    maxy = min(minB, minV)
-    maxy = maxy - 0.5
-
-    plt.clf()
-    plt.axis([Tmin, Tmax, miny, maxy])
-    plt.ylabel('m_st')
-
-    # locale.setlocale(locale.LC_NUMERIC, 'C')  # for graph
-
-    plt.plot(Tt, mB, 'b.-', label="B")
-    plt.plot(Tt, mV, 'g^--', mfc='none', ms=3, label="V")
-    ax = plt.gca()
-
-    # Azimuth axis----------------------------------
-    ax2 = ax.twiny()
-    ax2.set_xlim(ax.get_xlim())
-    numElems = 5
-    tt_idx = np.round(np.linspace(0, len(Tt) - 1, numElems)).astype(int)
-    Tt2 = np.array(Tt)
-    Az2 = np.array(Az)
-    El2 = np.array(El)
-
-    # Az2s = ["%3.2f" % Azt for Azt in Az2]
-    Az2s = []
-    Tt2s = []
-    for kk in range(0, len(Az2)):
-        azt = Az2[kk]
-        elt = El2[kk]
-        t = Tt2[kk]
-        Az2s.append("%3.1f; %3.1f" % (azt, elt))
-        Tt2s.append(t.strftime("%H:%M:%S"))
-    Az2s = np.array(Az2s)
-    ax2.set_xticks(Tt2[tt_idx])  # new_tick_locations
-    ax2.set_xticklabels(Az2s[tt_idx], fontsize=8)
-    ax2.set_xlabel(r"Az;h [deg]", fontsize=8)
-    ax2.tick_params(axis='x', which='major', pad=0)
-    # ----------------------------------------------------
-
-    # ax.xaxis.set_major_formatter(timeFmt)
-    Tt2s = np.array(Tt2s)
-    ax.set_xticks(Tt2[tt_idx])  # new_tick_locations
-    ax.set_xticklabels(Tt2s[tt_idx], fontsize=10)
-
-    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
-
-    t_pos = 0.99
-    ax2.set_title("Satellite Name:%s, NORAD:%s, COSPAR:%s \n LC Start=%s   dt=%s" %
-                  (NAME, NORAD, COSPAR, lc[0], lc[2]), pad=28, fontsize=10)
-    ax2.title.set_position([.5, t_pos])
-
-    ax.xaxis.grid()
-    ax.yaxis.grid()
-    # plt.savefig(scr_pth + "//tmp_last_fig.png")
-
-    if not os.path.exists(os.path.join("static", "tmp_sat")):
-        os.mkdir(os.path.join("static", "tmp_sat"))
-    name2 = NAME + "_" + str(time.time()) + ".png"
-    name3 = f'{os.path.join("static", "tmp_sat", name2)}'
-
-    for gfile in os.listdir(os.path.join("static", "tmp_sat")):
-        # if gfile.startswith(name + '_'):  # not to remove other images
-        #     os.remove(os.path.join("static", "tmp", gfile))
-        os.remove(os.path.join("static", "tmp_sat", gfile))
-
-    plt.savefig(name3, bbox_inches='tight')
-    plt.gcf()
-    return os.path.join("tmp_sat", name2)
 
