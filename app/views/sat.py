@@ -52,7 +52,8 @@ def generate_report(date_from, date_to):
 @login_required
 def sat_phot():
     # PATCH LC without calculated Period
-    # Uncomment to recalc ALL LCs period  (about 7-10 min procedure !)
+    # Uncomment to recalc ALL LCs period  (about 10-30 min procedure !)
+    # print("patching LCs periods. This will take some time ...")
     # calc_period_for_all_lc()
 
     # PATCH add updated time to each satellite record

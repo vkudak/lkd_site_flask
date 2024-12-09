@@ -17,6 +17,9 @@ from astropy.timeseries import LombScargle
 from sklearn.preprocessing import minmax_scale
 from pdmpy import pdm
 
+import pandas as pd
+from .period.find_period import find_period
+
 from dateutil import parser
 from matplotlib import pyplot as plt
 from statsmodels.tsa.tsatools import detrend as remove_trend
@@ -766,11 +769,20 @@ def lsp_calc(lc_id=None, lc=None):
 
     lctime = [x.timestamp() for x in lctime]
 
-    if lc.dt < 1:
-        max_freq = 0.83  # / (2 * lc.dt)
-    else:
-        max_freq = 1 / (2 * lc.dt)
-    min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
+    # try to detect Period with find_period function
+    det_p = detect_period(lc_id, detrend=True)
+    if det_p != -1:
+        min_p = det_p - (0.2 * det_p)
+        max_freq = 1 / min_p
+
+        max_p = det_p + (0.2 * det_p)
+        min_freq = 1 / max_p
+    else:  # if period not detected use clear LS method
+        if lc.dt < 1:
+            max_freq = 0.83  # / (2 * lc.dt)
+        else:
+            max_freq = 1 / (2 * lc.dt)
+        min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
 
     if lc.mag_err is not None:
         ls = LombScargle(lctime, lc.mag, lc.mag_err)
@@ -798,6 +810,31 @@ def lsp_calc(lc_id=None, lc=None):
 
         # Return period with higher power
         return sorted_pairs[0][1]
+
+
+def detect_period(lc_id, detrend=False):
+    lc = Lightcurve.get_by_id(id=lc_id)
+
+    if detrend:
+        lc.mag = remove_trend(lc.mag, order=2)
+    if len(lc.mag) < 100:
+        return -1
+    d = {'date': lc.date_time, 'value': lc.mag * -1}
+    df = pd.DataFrame(data=d)
+
+    res = find_period(df,
+                      tol_norm_diff=10 ** (-3),
+                      number_steps=50000,
+                      minimum_number_of_relevant_shifts=2,
+                      minimum_number_of_datapoints_for_correlation_test=100,
+                      minimum_ratio_of_datapoints_for_shift_autocorrelation=0.003,
+                      consider_only_significant_correlation=False,
+                      level_of_significance_for_pearson=1e-7,
+                      )
+    if res[-1] > 0.3:
+        return res[0]*60
+    else:
+        return -1
 
 
 def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False, detrend=False):
@@ -1081,8 +1118,10 @@ def calc_period_for_all_lc():
     Returns: period for all LCs
     """
     lcs = Lightcurve.get_all()
-    for lc in lcs:
-        lc.calc_period()
+    for lc in lcs[13:18]:
+        print(lc.id)
+        det_p = lc.detect_period()
+        lc.calc_period(detected_period=det_p)
 
 
 def calc_sat_updated_for_all_sat():

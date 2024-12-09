@@ -6,7 +6,9 @@ from datetime import datetime, timedelta, timezone, date
 import ephem
 from scipy.signal import find_peaks
 from astropy.timeseries import LombScargle
+import pandas as pd
 
+from app.period.find_period import find_period
 from app.star_util import t2phases, phase2str
 
 db = SQLAlchemy()
@@ -352,17 +354,47 @@ class Lightcurve(db.Model):
         """
         return db.session.query(cls).order_by(cls.id).all()
 
-    def calc_period(self):
+    def detect_period(self):
+        if len(self.mag) < 100:
+            return -1
+        d = {'date': self.date_time, 'value': self.mag * -1}
+        df = pd.DataFrame(data=d)
+
+        res = find_period(df,
+                          tol_norm_diff=10 ** (-3),
+                          number_steps=50000,
+                          minimum_number_of_relevant_shifts=2,
+                          minimum_number_of_datapoints_for_correlation_test=100,
+                          minimum_ratio_of_datapoints_for_shift_autocorrelation=0.003,
+                          consider_only_significant_correlation=False,
+                          level_of_significance_for_pearson=1e-7,
+                          )
+        if res[-1] > 0.3:
+            return res[0] * 60
+        else:
+            return -1
+
+    def calc_period(self, detected_period=-1):
         lctime = self.date_time
 
         lctime = [x.timestamp() for x in lctime]
 
-        if self.dt < 1:
-            max_freq = 0.83  # 1.2 sec
-        else:
-            max_freq = 1 / (2 * self.dt)
+        # try to detect Period with find_period function
+        det_p = detected_period
+        if det_p != -1:
+            min_p = det_p - (0.2 * det_p)
+            max_freq = 1 / min_p
 
-        min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
+            max_p = det_p + (0.2 * det_p)
+            min_freq = 1 / max_p
+        else:  # if period not detected use clear LS method
+
+            if self.dt < 1:
+                max_freq = 0.83  # 1.2 sec
+            else:
+                max_freq = 1 / (2 * self.dt)
+
+            min_freq = 1 / ((lctime[-1] - lctime[0]) / 2)
 
         if self.mag_err is not None:
             ls = LombScargle(lctime, self.mag, self.mag_err)
@@ -392,3 +424,4 @@ class Lightcurve(db.Model):
             self.lsp_period = sorted_pairs[0][1]
 
         db.session.commit()
+        db.session.refresh(self)
