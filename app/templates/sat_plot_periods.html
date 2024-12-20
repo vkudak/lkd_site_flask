@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+        {% block content %}
+                <div id="post12" style="width:100%; margin-right: auto; margin-left: auto; text-align: center;" >
+                    <br>
+                    <h2>Details of Satellite
+                        <br>NORAD={{sat.norad}}, COSPAR={{sat.cospar }}, NAME={{sat.name }}
+                        <br> Number of LCs={{ sat.get_lcs()|length }}
+                    </h2>
+
+
+                    <div style="width:800px; margin-right: auto; margin-left: auto; border-collapse: collapse;">
+                        {{ periods_fig | safe}}
+                    </div>
+
+                    <br>
+
+
+                </div>
+                <br class="clearfix" />
+        {% endblock %}

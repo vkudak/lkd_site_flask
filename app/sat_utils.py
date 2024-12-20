@@ -5,6 +5,7 @@ import numpy as np
 from datetime import datetime, timedelta
 import time
 
+from bokeh.colors.groups import black
 from bokeh.layouts import gridplot
 from bokeh.models import DatetimeTickFormatter, Text, HoverTool, Scatter, Title, ColumnDataSource, Whisker
 from bokeh.plotting import figure
@@ -494,6 +495,60 @@ def process_lc_files(lc_flist, db):
                             print("Error = ", e, e.__class__.__name__)
                             print("Bed format PHR in file =", file)
                         pass
+
+
+def plot_periods_bokeh(sat_id):
+    sat = Satellite.get_by_id(sat_id)
+    lcs = sat.get_lcs()
+
+    # Remove LCs without period
+    lcs = [lc for lc in lcs if lc.lsp_period is not None]
+
+    periods = [lc.lsp_period for lc in lcs]
+    dates = [lc.ut_start for lc in lcs]
+
+    ## Plot_periods
+    tools = 'pan,wheel_zoom,box_zoom,reset,save'
+    title = f"Satellite Name:{sat.name}, NORAD:{sat.norad}, COSPAR:{sat.cospar}"
+
+    plot = figure(title=title, plot_height=400, plot_width=800,
+                  x_axis_type='datetime', min_border=10,
+                  # y_range=(max(lc.mag) + dm, min(lc.mag) - dm),
+                  tools=tools
+                  )
+
+    plot.output_backend = "svg"
+    plot.title.align = 'center'
+
+    plot.yaxis.axis_label = u'Period [sec]'  # m_st
+    plot.xaxis.axis_label = r"Dates"
+
+    # source = ColumnDataSource(dict(x=dates, y=periods))
+
+    if periods is not None:
+        # plot.line(dates, periods, color="black", line_width=0.5)
+        plot.scatter(dates, periods, marker="o", size=5, color="black", fill_color="black", alpha=0.8)
+    else:
+        return None, None
+
+
+    hover = HoverTool(
+        tooltips=[
+            ('time', '@x{%Y-%M-%d}'),
+            ('period', '@y'),
+        ],
+        formatters={
+            '@x': 'datetime',
+            '@y': 'numeral',
+        },
+        mode='mouse'
+    )
+    plot.add_tools(hover)
+
+    periods_fig = file_html([plot], CDN, "Periods Plot")
+    ######
+
+    return sat, periods_fig
 
 
 def plot_lc_bokeh(lc_id):
@@ -1115,13 +1170,15 @@ def plot_lc(lc_id):
 def calc_period_for_all_lc():
     """
     Patch Period value if it is None or not calculated at all
-    Returns: period for all LCs
+    Returns: Nothing. Patches all periods for all LCs
     """
     lcs = Lightcurve.get_all()
-    for lc in lcs[13:18]:
+    print("LCs collected. Processing...")
+    for lc in lcs:
         print(lc.id)
-        det_p = lc.detect_period()
-        lc.calc_period(detected_period=det_p)
+        if lc.id > 2104:
+            det_p = lc.detect_period()
+            lc.calc_period(detected_period=det_p)
 
 
 def calc_sat_updated_for_all_sat():

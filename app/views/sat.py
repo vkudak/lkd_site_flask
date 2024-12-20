@@ -11,7 +11,7 @@ import datetime
 from app import cache
 from app.models import Satellite, db, Lightcurve
 from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc, \
-    lc_to_file
+    lc_to_file, plot_periods_bokeh
 
 # FOR PATCH case
 from app.sat_utils import lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat
@@ -147,6 +147,17 @@ def sat_lc_plot(lc_id):
     # value = request.form.get('checkbox')
     # print(value)
     return render_template("sat_lc_details.html", lc=lc, lc_graph=lc_fig)
+
+
+@sat_bp.route('/sat_plot_periods.html/<int:sat_id>', methods=['GET', 'POST'])
+@login_required
+def sat_plot_periods(sat_id):
+    sat, periods_fig = plot_periods_bokeh(sat_id)
+    if sat is not None and periods_fig is not None:
+        return render_template("sat_plot_periods.html", sat=sat, periods_fig=periods_fig)
+    else:
+        flash("Error in Periods Plot. Please see logs for more details.")
+        return redirect(url_for('sat.details', sat_id=sat_id))
 
 
 @sat_bp.route('/sat_lc_period_plot.html/<int:lc_id>', methods=['GET', 'POST'])

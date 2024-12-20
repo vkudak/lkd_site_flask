@@ -14,13 +14,17 @@
         </p>
     <br>
 
-<label for="multi_ckbox">Plot multiple LCs </label>
+    <label for="multi_ckbox">Plot multiple LCs </label>
+
+
 {% if chckb == True %}
     <input id="multi_ckbox" type="checkbox" checked onchange="multi_ajaxRequest()" />
 {% else %}
     <input id="multi_ckbox" type="checkbox" onchange="multi_ajaxRequest()" />
 {% endif %}
 
+
+    <a style="margin-left: 50px;;" href="{{url_for('sat.sat_plot_periods', sat_id=sat_search.id) }}"> Plot All Periods </a>
     </div>
         <div id="lc_table" style="width:80%; max-width: 1100px; margin-right: auto; margin-left: auto">
          <table id="sat_lc" class="display" style="width:100%;" >

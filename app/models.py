@@ -359,16 +359,20 @@ class Lightcurve(db.Model):
             return -1
         d = {'date': self.date_time, 'value': self.mag * -1}
         df = pd.DataFrame(data=d)
+        try:
+            res = find_period(df,
+                              tol_norm_diff=10 ** (-3),
+                              number_steps=50000,
+                              minimum_number_of_relevant_shifts=2,
+                              minimum_number_of_datapoints_for_correlation_test=100,
+                              minimum_ratio_of_datapoints_for_shift_autocorrelation=0.003,
+                              consider_only_significant_correlation=False,
+                              level_of_significance_for_pearson=1e-7,
+                              )
+        except Exception as e:
+            print("Could not detect period due to {}".format(e))
+            return -1
 
-        res = find_period(df,
-                          tol_norm_diff=10 ** (-3),
-                          number_steps=50000,
-                          minimum_number_of_relevant_shifts=2,
-                          minimum_number_of_datapoints_for_correlation_test=100,
-                          minimum_ratio_of_datapoints_for_shift_autocorrelation=0.003,
-                          consider_only_significant_correlation=False,
-                          level_of_significance_for_pearson=1e-7,
-                          )
         if res[-1] > 0.3:
             return res[0] * 60
         else:
