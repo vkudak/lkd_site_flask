@@ -825,7 +825,7 @@ def lsp_calc(lc_id=None, lc=None):
     lctime = [x.timestamp() for x in lctime]
 
     # try to detect Period with find_period function
-    det_p = detect_period(lc_id, detrend=True)
+    det_p = detect_period(lc.date_time, lc.mag, detrend=True)
     if det_p != -1:
         min_p = det_p - (0.2 * det_p)
         max_freq = 1 / min_p
@@ -867,14 +867,12 @@ def lsp_calc(lc_id=None, lc=None):
         return sorted_pairs[0][1]
 
 
-def detect_period(lc_id, detrend=False):
-    lc = Lightcurve.get_by_id(id=lc_id)
-
+def detect_period(date_time, mag, detrend=False):
     if detrend:
-        lc.mag = remove_trend(lc.mag, order=2)
-    if len(lc.mag) < 100:
+        mag = remove_trend(mag, order=2)
+    if len(mag) < 100:
         return -1
-    d = {'date': lc.date_time, 'value': lc.mag * -1}
+    d = {'date': date_time, 'value': mag * -1}
     df = pd.DataFrame(data=d)
 
     res = find_period(df,
