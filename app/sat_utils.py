@@ -534,7 +534,7 @@ def plot_periods_bokeh(sat_id):
 
     hover = HoverTool(
         tooltips=[
-            ('time', '@x{%Y-%M-%d}'),
+            ('time', '@x{%Y-%m-%d}'),
             ('period', '@y'),
         ],
         formatters={
