@@ -891,7 +891,7 @@ def detect_period(date_time, mag, detrend=False):
         return -1
 
 
-def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False, detrend=False):
+def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False):
     """
     Args:
         lc_id: id of LC
@@ -906,8 +906,8 @@ def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False, detrend=False):
     lctime = lc.date_time
     lctime = [x.timestamp() for x in lctime]
 
-    if detrend:
-        lc.mag = remove_trend(lc.mag, order=3)
+    # if detrend:
+    #     lc.mag = remove_trend(lc.mag, order=2)
 
     if lc.dt < 1:
         max_freq = 0.83 #/ (2 * lc.dt)
@@ -925,7 +925,7 @@ def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False, detrend=False):
         # nyquist_factor=0.5,
         minimum_frequency=min_freq,
         maximum_frequency=max_freq,
-        samples_per_peak=30,
+        samples_per_peak=50,
         normalization='standard')
 
     periods = 1.0 / frequency

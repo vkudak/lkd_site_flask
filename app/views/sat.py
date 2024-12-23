@@ -174,7 +174,7 @@ def sat_lc_period_plot(lc_id):
         else:
             per_form.per_input.data = 0.0 # if period is None
 
-        lsp_fig, lc, p = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True, detrend=True)
+        lsp_fig, lc, p = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True)
         phased_fig = plot_phased_lc(lc, lc.lsp_period)
         return render_template("sat_lc_lsp_details.html", lc=lc,
                                lsp_graph=lsp_fig, ph_graph=phased_fig, user=current_user, per_form=per_form)
