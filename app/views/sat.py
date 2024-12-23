@@ -4,7 +4,9 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask import send_file
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
+from pycparser.c_ast import Default
 from wtforms import StringField, MultipleFileField, SubmitField, RadioField, IntegerField
+from wtforms.fields.numeric import DecimalField, FloatField
 from wtforms.validators import Length, DataRequired
 import datetime
 
@@ -163,12 +165,38 @@ def sat_plot_periods(sat_id):
 @sat_bp.route('/sat_lc_period_plot.html/<int:lc_id>', methods=['GET', 'POST'])
 @login_required
 def sat_lc_period_plot(lc_id):
-    # TODO: Add "period update" window in html to write new period in DB
-    lsp_fig, lc, p = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True, detrend=True)
-    phased_fig = plot_phased_lc(lc, p)
-    return render_template("sat_lc_lsp_details.html", lc=lc,
-                           lsp_graph=lsp_fig, ph_graph=phased_fig)
+    lc = Lightcurve.get_by_id(lc_id)
+    per_form = PeriodUpdateForm()
 
+    if request.method == "GET":
+        if lc.lsp_period:
+            per_form.per_input.data = lc.lsp_period
+        else:
+            per_form.per_input.data = 0.0 # if period is None
+
+        lsp_fig, lc, p = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True, detrend=True)
+        phased_fig = plot_phased_lc(lc, lc.lsp_period)
+        return render_template("sat_lc_lsp_details.html", lc=lc,
+                               lsp_graph=lsp_fig, ph_graph=phased_fig, user=current_user, per_form=per_form)
+
+    elif request.method == "POST": # "POST"
+        if per_form.validate_on_submit() and per_form.add.data:
+            # update period
+            new_per = per_form.per_input.data
+            lc.lsp_period = float(new_per)
+            # db.session.merge(lc)
+            db.session.commit()
+
+            current_app.logger.info(f'Period updated for LC with id {lc_id}. New period value is: {new_per}')
+            cache.clear()
+            return redirect(url_for("sat.sat_lc_period_plot", lc_id=lc_id))
+        else: # validation failed
+            current_app.logger.error(f'Error in Period update. Can be caused by validation of Form')
+            flash(f"Error happened. Probably used wrong value as period or some validation error")
+            return redirect(url_for("sat.sat_lc_period_plot", lc_id=lc_id))
+    else:
+        flash("Something unexpected happened. Contact admin please.")
+        return redirect(url_for("sat.sat_lc_period_plot", lc_id=lc_id))
 
 @sat_bp.route('/sat_download_lc.html/<int:lc_id>', methods=['GET', 'POST'])
 @login_required
@@ -416,3 +444,12 @@ class ReportForm(FlaskForm):
     d_from = StringField(u'From:', [DataRequired(), Length(min=10, max=10)])
     d_to = StringField(u'To:', [DataRequired(), Length(min=10, max=10)])
     generate = SubmitField("Generate")
+
+# def float_validation(form, field):
+#     if not isInstance(field.data, float):
+#         raise ValidationError('Not a float')
+
+class PeriodUpdateForm(FlaskForm):
+    form_widget_args = {'per_input': {'style': 'width: 50px'}}
+    per_input = FloatField(u'Input:', [DataRequired()])
+    add = SubmitField("Update")

@@ -823,6 +823,7 @@ def lsp_calc(lc_id=None, lc=None):
     lctime = lc.date_time
 
     lctime = [x.timestamp() for x in lctime]
+    # lc_mag = remove_trend(lc.mag, order=3)  ???? do we need this ????
 
     # try to detect Period with find_period function
     det_p = detect_period(lc.date_time, lc.mag, detrend=True)
@@ -869,7 +870,7 @@ def lsp_calc(lc_id=None, lc=None):
 
 def detect_period(date_time, mag, detrend=False):
     if detrend:
-        mag = remove_trend(mag, order=2)
+        mag = remove_trend(mag, order=3)
     if len(mag) < 100:
         return -1
     d = {'date': date_time, 'value': mag * -1}
@@ -906,7 +907,7 @@ def lsp_plot_bokeh(lc_id, return_lc=False, return_period=False, detrend=False):
     lctime = [x.timestamp() for x in lctime]
 
     if detrend:
-        lc.mag = remove_trend(lc.mag, order=2)
+        lc.mag = remove_trend(lc.mag, order=3)
 
     if lc.dt < 1:
         max_freq = 0.83 #/ (2 * lc.dt)
@@ -1019,9 +1020,9 @@ def plot_phased_lc(lc, period):
     Create phased plot of LC
     Args:
         lc: lc instance
-        period: possible period in seconds (from LSP method)
+        period: possible period in seconds (from DB or LSP method)
     Return:
-        Two plots - one with Period from LSP, second with Period defined with PDM method where P is +/- 3 *P_lsp
+        Two plots - one with Period from DB, second with Period defined with PDM method where P is +/- 3 *P_DB
         If period is None - return None
     """
     if period is None:
@@ -1029,12 +1030,14 @@ def plot_phased_lc(lc, period):
     else:
         t = [x.timestamp() for x in lc.date_time]
         mag_norm = norm_lc(lc.mag)
+        mag_norm = remove_trend(mag_norm, order=3)
         phase1 = get_phases(t, t[0], period)
 
         if len(mag_norm) > 100:
             # new period search
+            ns = 3.0 # +/- 3 Periods
             freq, theta = pdm(t, mag_norm,
-                              f_min=1./(period*4.), f_max=1./(period/4.), delf=1e-5)  # 1e-6 ???
+                              f_min=1./(period*ns), f_max=1./(period/ns), delf=1e-5)  # 1e-6 ???
                               # f_min = 1. / (period * 4.), f_max = 1. / (period / 4.), delf = 1e-5, nbin=2)  # 1e-6 ???
             period2 = 1 / freq[np.argmin(theta)]
             #####
@@ -1047,10 +1050,10 @@ def plot_phased_lc(lc, period):
         plot.add_layout(Title(text=f"Period={period:.3f} sec and Epoch={lc.date_time[0]}",
                                align='center'), 'above')
         if len(mag_norm) < 100:
-            plot.add_layout(Title(text="Phased LC with LSP Period. N_points < 100, no DPM method",
+            plot.add_layout(Title(text="Phased LC with Defined Period. N_points < 100, no DPM method",
                                   text_font_size="12pt", align='center'), 'above')
         else:
-            plot.add_layout(Title(text="Phased LC with LSP Period",
+            plot.add_layout(Title(text="Phased LC with Defined Period",
                                   text_font_size="12pt", align='center'), 'above')
 
         plot.output_backend = "svg"
@@ -1175,7 +1178,7 @@ def calc_period_for_all_lc():
     print("LCs collected. Processing...")
     for lc in lcs:
         print(lc.id)
-        if lc.id > 2104:
+        if lc.id > 0: # use to define start point
             det_p = lc.detect_period()
             lc.calc_period(detected_period=det_p)
 

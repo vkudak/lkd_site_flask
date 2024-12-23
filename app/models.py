@@ -383,7 +383,7 @@ class Lightcurve(db.Model):
 
         lctime = [x.timestamp() for x in lctime]
 
-        # try to detect Period with find_period function
+        # try to detect Period with find_period function and use +/-0.2 boundaries
         det_p = detected_period
         if det_p != -1:
             min_p = det_p - (0.2 * det_p)
@@ -391,7 +391,7 @@ class Lightcurve(db.Model):
 
             max_p = det_p + (0.2 * det_p)
             min_freq = 1 / max_p
-        else:  # if period not detected use clear LS method
+        else:  # if period not detected use clear LS method and wide boundaries
 
             if self.dt < 1:
                 max_freq = 0.83  # 1.2 sec
