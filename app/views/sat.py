@@ -163,6 +163,7 @@ def sat_plot_periods(sat_id):
 @sat_bp.route('/sat_lc_period_plot.html/<int:lc_id>', methods=['GET', 'POST'])
 @login_required
 def sat_lc_period_plot(lc_id):
+    # TODO: Add "period update" window in html to write new period in DB
     lsp_fig, lc, p = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True, detrend=True)
     phased_fig = plot_phased_lc(lc, p)
     return render_template("sat_lc_lsp_details.html", lc=lc,

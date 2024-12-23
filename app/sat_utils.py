@@ -1034,7 +1034,8 @@ def plot_phased_lc(lc, period):
         if len(mag_norm) > 100:
             # new period search
             freq, theta = pdm(t, mag_norm,
-                              f_min=1./period/3., f_max=1./period*3.0, delf=1e-5)  # 1e-6 ???
+                              f_min=1./(period*4.), f_max=1./(period/4.), delf=1e-5)  # 1e-6 ???
+                              # f_min = 1. / (period * 4.), f_max = 1. / (period / 4.), delf = 1e-5, nbin=2)  # 1e-6 ???
             period2 = 1 / freq[np.argmin(theta)]
             #####
             phase2 = get_phases(t, t[0], period2)
