@@ -601,3 +601,31 @@ samp {
     display: block;
   }
 }
+
+#wrapper2 {
+	display: flex;
+	justify-content: space-between;
+	width: 70%;
+	margin: 50px auto;
+}
+
+#telescope-menu {
+	width: 25%;
+	margin-left: 15%;
+}
+
+#dynamic-content {
+	width: 95%;
+	padding: 20px; /* Padding for content */
+	/*border: solid 1px #16232D; !* Optional border for visibility *!*/
+}
+
+#menu_list{
+	padding: 0 !important;
+	border-top: none !important;
+	border-bottom: none !important;
+}
+
+	/*padding: 10px 0 10px 0;*/
+	/*border-top: solid 1px #16232D;*/
+	/*border-bottom: solid 1px #000000;*/

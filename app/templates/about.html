@@ -1,50 +1,211 @@
 {% extends 'base.html' %}
-        {% block content %}
-        <!--<div id="page">-->
-            <!--<div id="content">-->
-                <div id="post1">
-                    <h2>Welcome to LSR</h2>
-                    <img class="alignleft" src="{{url_for('static', filename='images/AVR2.jpg')}}"
-                         width="350" height="250" alt="" />
-                    <p>
-                        The Laboratory of Space Research of Uzhhorod National University is studying near-Earth space.
-                        We observe artificial satellites of the Earth, small bodies of the solar system, variable stars.
-                    </p>
-                    LSR on <a href="https://uk.wikipedia.org/wiki/%D0%9B%D0%B0%D0%B1%D0%BE%D1%80%D0%B0%D1%82%D0%BE%D1%80%D1%96%D1%8F_%D0%BA%D0%BE%D1%81%D0%BC%D1%96%D1%87%D0%BD%D0%B8%D1%85_%D0%B4%D0%BE%D1%81%D0%BB%D1%96%D0%B4%D0%B6%D0%B5%D0%BD%D1%8C_%D0%A3%D0%B6%D0%9D%D0%A3">
+    {% block content %}
+    <!--<div id="page">-->
+        <!--<div id="content">-->
+            <div id=wrapper2>
+
+        <div id="telescope-menu">
+            <!-- <h2>Telescope Menu</h2> -->
+            <ul>
+                <li id="menu_list"><a href="#" onclick="showContent('welcome')">Welcome</a></li>
+                <li id="menu_list"><b>Instruments:</b></li>
+                <ol id="menu_list" style="margin-left: 15%;">
+                    <li id="menu_list"><a href="#" onclick="showContent('BRC-250M')">BRC-250M</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('ChV-400')">ChV-400</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('Photom_Scope')">Photom_Scope</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('TPL-1M')">TPL-1M</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('AFU')">AFU-75</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('MAK180')">SkyWatcher MC 180</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('AstroFi')">Celestron Astro Fi 6</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('Lunt_50')">Lunt 50</a></li>
+                    <li id="menu_list"><a href="#" onclick="showContent('AVR')">AVR-2</a></li>
+                </ol>
+            </ul>
+        </div>
+
+
+        <!-- <div id="content"> -->
+        <!-- <h2>Content Area</h2> -->
+            <div id="dynamic-content">
+                <p>Select a telescope menu item to see the content here.</p>
+            </div>
+        <!-- </div> -->
+    </div>
+            <br class="clearfix" />
+        <!--</div>-->
+
+        <!--<br class="clearfix" />-->
+    <!--</div>-->
+
+
+        <script type="text/javascript">
+        function showContent(item) {
+            const contentDiv = document.getElementById('dynamic-content');
+            let content;
+
+            switch(item) {
+                case 'welcome':
+                    content = `
+                        <h3>Welcome</h3>
+                        <p>The Laboratory of Space Research of Uzhhorod National University is studying near-Earth space.
+                        We observe artificial satellites of the Earth, small bodies of the solar system, variable stars. <br>
+                        LSR on <a href="https://uk.wikipedia.org/wiki/%D0%9B%D0%B0%D0%B1%D0%BE%D1%80%D0%B0%D1%82%D0%BE%D1%80%D1%96%D1%8F_%D0%BA%D0%BE%D1%81%D0%BC%D1%96%D1%87%D0%BD%D0%B8%D1%85_%D0%B4%D0%BE%D1%81%D0%BB%D1%96%D0%B4%D0%B6%D0%B5%D0%BD%D1%8C_%D0%A3%D0%B6%D0%9D%D0%A3">
                     wikipedia</a>
                     <br>
-                    LSR on Uzhhorod National University <a href="https://www.uzhnu.edu.ua/uk/cat/deps-nnl_cosm">web site</a>
-                </div>
-                <div id="post1">
-                    <img class="alignleft" src="{{url_for('static', filename='images/TPL-1M.jpg') }}"
-                         width="350" height="350" alt="" />
-                    <p>
-                        Telescope TPL-1M - designed as laser ranging system (D = 1 m, f = 11.6 m).
-                        Mounted in Derenivka in year 2000. <br>
-                        Now used with QHY-174M-GPS CMOS camera (installed on guider) for photometry of LEO satellites.
-                    </p>
-                </div>
-
-                <div id="post1">
-                    <img class="alignleft" src="{{url_for('static', filename='images/ChV400.jpg') }}"
-                         width="350" height="450" alt="" />
-                    <p>
-                        Telescope ChV400 - Newton with corrector (D = 400 mm, f = 1750 mm).
+                    LSR on Uzhhorod National University <a href="https://www.uzhnu.edu.ua/en/cat/deps-nnl_cosm">web site</a> <br></p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/AVR2.jpg')}}"
+                            style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;"
+                             alt="Welcome Image" />
+                        </div>`;
+                    break;
+                case 'BRC-250M':
+                    content = `
+                        <h3>Takahashi BRC-250M</h3>
+                        <p>Telescope BRC-250M telescope (D = 250 mm, f = 1268 mm).
+                        The optical configuration of the Takahashi BRC-250M is characterized by a particular scheme
+                        called Baker-Richey-Chrétien, an evolution of the classic Cassegrain.
+                        Used with Alta F16M CCD camera for astrometry of GEO satellites.
+                        <br> Mount: WS-180</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/BRC250.jpg') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                            alt="BRC-250M Image" />
+                        </div>`;
+                    break;
+                case 'ChV-400':
+                    content = `
+                        <h3>ChV-400</h3>
+                        <p>Telescope ChV400 - Newton with corrector (D = 400 mm, f = 1750 mm).
                         Used with FLI P9000 CCD camera for astrometry and photometry of GEO satellites,
                         photometry of variable stars and asteroids. Equipped with BVR filters.
-                    </p>
-                </div>
-                <div id="post1">
-                    <img class="alignleft" src="{{url_for('static', filename='images/BRC250.jpg') }}"
-                         width="350" height="450" alt="" />
-                    <p>
-                        Telescope BRC250M - (D = 250 mm, f = 1268 mm).
-                        Used with Alta F16M CCD camera for astrometry of GEO satellites.
-                    </p>
-                </div>
-                <br class="clearfix" />
-            <!--</div>-->
+                        <br> Mount: WS-240</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/ChV400.jpg') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                             alt="ChV-400 Image" />
+                        </div>`;
+                    break;
+                case 'TPL-1M':
+                    content = `
+                        <h3>TPL-1M</h3>
+                        <p>Telescope TPL-1M - designed as laser ranging system (D = 1 m, f = 11.6 m).
+                        Mounted in Derenivka in year 2000. <br>
+                        Now used with QHY-174M-GPS CMOS camera (installed on guider) for photometry of LEO satellites.</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/TPL-1M.jpg') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                                alt="TPL-1M Image"/>
+                        </div>`;
+                    break;
+                case 'Photom_Scope':
+                    content = `
+                        <h3>Photom Scope</h3>
+                        <p>Telescope on the base of AZ-EQ6 Pro Sky Watcher mount and two Newtonian tubes (D=200mm F=1000 mm) -
+                        used for fast photometry observation of RSO objects simultaneously in two bands.<br>
+                        Used with QHY-174M-GPS CMOS camera.</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/no_photo.png') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                                alt="TPL-1M Image"/>
+                        </div>`;
+                    break;
+                case 'MAK180':
+                    content = `
+                        <h3>SkyWatcher MAK 180</h3>
+                        <p>This high-quality Maksutov telescope (D=180mm F=2700mm) provides an ideal basis for both planetary and DSO observing.
+                        Its diameter makes it a 'fast' yet portable instrument. The Maksutov-Cassegrain system allows a long focal length to be combined with a relatively short OTA length.
+                        The central obstruction in the optics is minimal as the small secondary mirror has been directly vacuum deposited onto the meniscus lens. The meniscus lens gives very good contrast - for example ideal for planetary observing. The lens corrects for spherical aberration and its shape reduces chromatic aberration to a minimum. It comes supplied with a mounting plate.
+                        <br> Used for excursions and presentations. <br> Mount: HEQ-5.</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/MAK180.jpeg') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                                alt="TPL-1M Image"/>
+                        </div>`;
+                    break;
+                case 'AstroFi':
+                    content = `
+                        <h3>SkyWatcher MAK 180</h3>
+                        <p>The Astro Fi 6" is a computerized alt-azimuth Schmidt Cassegrain telescope (D=150mm F=1500mm) perfect for terrestrial and celestial viewing on the go.
+                        The Astro Fi offers dazzling views of craters on the Moon, the rings of Saturn, the Great Red Spot on Jupiter, the Orion Nebula, the Hercules
+                        Globular Cluster and so much more at night. <br> Used for excursions and presentations.</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/AstroFi.png') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                                alt="TPL-1M Image"/>
+                        </div>`;
+                    break;
+                case 'Lunt_50':
+                    content = `
+                        <h3>Lunt 50 mm</h3>
+                        <p>The Lunt 50 mm Dedicated Hydrogen-Alpha Solar Telescope, complete with a Pressure Tuner, provides the basic essentials
+                        perfect for a first time introduction to solar observing.  Also it includes the newest technology for fine tuning,
+                        allowing basic research of the Sun’s disk and some surface details. <br> Used for excursions and presentations.</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/Lunt50.jpg') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                                alt="TPL-1M Image"/>
+                        </div>`;
+                    break;
+                case 'AFU':
+                    content = `
+                        <h3>AFU-75</h3>
+                        <p>The AFU-75 is a four-axis azimuthal tracking camera mounted on an equatorial platform, with automatic motion along the satellite orbit.
+                        Camera is redesigned for photometry observation of LEO satellites in B and V bands.</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/AFU.png') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                                alt="TPL-1M Image"/>
+                        </div>`;
+                    break;
+                case 'AVR':
+                    content = `
+                        <h3>AVR-2</h3>
+                        <p>The AVR-2 telescope (D=200mm F=3000mm) is a refractor telescope manufactured by the LOMO company, a model of
+                        the AVR line - "Astronomical Visual Refractor".
+                        It was widely used and actively used for astronomical research in the second half of the 20th century.</p>
+                        <div class="image-desc">
+                            <img src="{{url_for('static', filename='images/AVR2-tel.jpg') }}"
+                                style="  display: block;
+                                      margin-left: auto;
+                                      margin-right: auto;
+                                      max-width: 100%;"
+                                alt="TPL-1M Image"/>
+                        </div>`;
+                    break;
+            }
 
-            <!--<br class="clearfix" />-->
-        <!--</div>-->
-        {% endblock %}
+            contentDiv.innerHTML = content;
+        }
+            // Set default content to "Welcome" when the page loads
+            window.onload = function() {
+                showContent('welcome');
+            }
+        </script>
+    {% endblock %}
