@@ -2,24 +2,26 @@
         {% block content %}
         <!--<div id="page">-->
             <!--<div id="content">-->
-                <div id="post1">
+                <div id="post1" style="display: table">
                 <br>
+
                     <h2>Welcome to Laboratory of Space Research, UzhNU</h2>
                     <img class="alignleft" src="{{url_for('static', filename='images/AVR2.jpg') }}"
                     width="500" height="350" alt="" />
-                    <p> Main research areas in LSR are: <br>
-                        <li>Artificial Satellites (Astrometry and Photometry GEO/LEO objects)</li>
-                        <li> Variable Stars </li>
-                        <li> Asteroids </li>
-                    <br>
+{#                    <p style="margin-bottom: 0.2em"> <b> Main research areas in LSR are: </b></p>#}
+                    <h3 style="margin-bottom: 0.2em"> Main research areas in LSR are:</h3>
+                        <ul style="list-style: circle; margin-bottom: 0.2em; margin-left: auto; margin-right: auto; padding-left: 550px">
+                            <li style="border-top: none; padding: 0; border-bottom: none">Artificial Satellites (Astrometry and Photometry GEO/LEO objects)</li>
+                            <li style="border-top: none; padding: 0; border-bottom: none"> Variable Stars </li>
+                            <li style="border-top: none; padding: 0; border-bottom: none"> Asteroids </li>
+                        </ul>
+                    <p style="margin-bottom: 0.2em"> <b>Our instruments are listed <a href="{{ url_for('home.about') }}">here</a> </b></p>
                     <br>
 
                         <h2> Projects </h2>
                             <a href="{{ url_for('eb.eb_phot') }}"> Photometry of Selected Eclipsing Binary Systems </a><br>
                             <a href=http://hebe.astro.amu.edu.pl/p_about.php> Selection Effects in Spins and Shapes of Asteroids </a><br>
                             <a href="{{ url_for('sat.sat_phot') }}"> Database of Artificial Satellites Photometry</a>
-
-                    </p>
 
                 </div>
 

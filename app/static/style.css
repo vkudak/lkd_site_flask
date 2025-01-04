@@ -626,6 +626,8 @@ samp {
 	border-bottom: none !important;
 }
 
-	/*padding: 10px 0 10px 0;*/
-	/*border-top: solid 1px #16232D;*/
-	/*border-bottom: solid 1px #000000;*/
+/*.container {*/
+/*  display: flex;*/
+/*  align-items: center;*/
+/*  justify-content: center*/
+/*}*/
