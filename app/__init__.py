@@ -77,11 +77,12 @@ def create_app():
 
     # csrf.init_app(app)
 
-    from .views import auth_bp, home_bp, eb_bp, sat_bp
+    from .views import auth_bp, home_bp, eb_bp, sat_bp, sat_view_bp
     app.register_blueprint(home_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(eb_bp)
     app.register_blueprint(sat_bp)
+    app.register_blueprint(sat_view_bp)
 
     login_manager.login_view = "auth.login"
     app.app_context().push()

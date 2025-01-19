@@ -1,3 +1,5 @@
+import os
+
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from sqlalchemy import and_
@@ -10,6 +12,10 @@ import pandas as pd
 
 from app.period.find_period import find_period
 from app.star_util import t2phases, phase2str
+from flask import current_app
+
+from spacetrack import SpaceTrackClient
+
 
 db = SQLAlchemy()
 
@@ -277,7 +283,6 @@ class Satellite(db.Model):
         db.session.commit()
 
 
-
 class Lightcurve(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # sat_id = db.Column(db.Integer, db.ForeignKey('satellite.id'))
@@ -429,3 +434,31 @@ class Lightcurve(db.Model):
 
         db.session.commit()
         db.session.refresh(self)
+
+
+class SatForView(db.Model):
+    """ Class for sat view section. Not connected to other classes """
+    __tablename__ = 'sat_for_view'
+    id = db.Column(db.Integer, primary_key=True)
+    norad = db.Column(db.Integer, nullable=False)
+    cospar = db.Column(db.String(15), nullable=False)
+    name = db.Column(db.String(35), nullable=False)
+    priority = db.Column(db.Integer, nullable=False, default=0)
+    tle = db.Column(db.Text)
+
+    def get_tle(self):
+        # if tle_epoch  - epoch > 3:
+        try:
+            username = os.getenv('ST_USERNAME')
+            password = os.getenv('ST_PASSWORD')
+            st = SpaceTrackClient(username, password)
+            data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
+            self.tle = data
+        except Exception as e:
+            current_app.logger.error(f" {e.message}, {e.args}\nCant read SpaceTrack username and password")
+            return False
+
+        return True
+
+    def get_sat_passes(self, t, interval):
+        pass
