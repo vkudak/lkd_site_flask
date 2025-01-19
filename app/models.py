@@ -43,6 +43,24 @@ class User(db.Model, UserMixin):
         users = db.session.query(cls).order_by(cls.id).all()
         return users
 
+    @classmethod
+    def get_all_sites(cls):
+        """
+        Return all Sites of all Users
+        Return: list where all site are represented as dits
+            {"name": name, "lat": lat, "lon": lon, "elev": elev}
+        """
+        site_names = db.session.query(cls).order_by(cls.site_name).distinct().all()
+        site_lats = db.session.query(cls).order_by(cls.site_lat).distinct().all()
+        site_lons = db.session.query(cls).order_by(cls.site_lon).distinct().all()
+        site_elevs = db.session.query(cls).order_by(cls.site_elev).distinct().all()
+
+        sites_data = [
+            {"name": name, "lat": lat, "lon": lon, "elev": elev}
+            for name, lat, lon, elev in zip(site_names, site_lats, site_lons, site_elevs)
+        ]
+        return sites_data
+
 
 class Star(db.Model):
     id = db.Column(db.Integer, primary_key=True)

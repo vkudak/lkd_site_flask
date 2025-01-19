@@ -1,5 +1,6 @@
 import os
 import sys
+from operator import itemgetter
 
 import numpy as np
 from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify, Response
@@ -11,7 +12,16 @@ from skyfield.timelib import Timescale
 from wtforms import StringField, MultipleFileField, SubmitField, RadioField, IntegerField
 from wtforms.fields.numeric import DecimalField, FloatField
 from wtforms.validators import Length, DataRequired
-import datetime
+# import datetime
+
+from spacetrack import SpaceTrackClient
+from skyfield.earthlib import refraction
+from skyfield import almanac
+from skyfield.units import Angle
+from skyfield.api import N, S, E, W, load, wgs84, utc, EarthSatellite
+from datetime import datetime, timedelta
+from skyfield.iokit import parse_tle_file
+from io import BytesIO
 
 from app import cache
 from app.models import Satellite, db, Lightcurve
@@ -22,38 +32,49 @@ sat_view_bp = Blueprint('sat_view', __name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
-@sat_view_bp.route('/sat_view.html', methods=["POST", "GET"])
+def calc_t_twilight(site, h_sun=-12):
+    """
+    Calculate twilight time according to h_sun
+    site: observational site. Create by api.Topos(lat, lon, elevation_m=elv) or api.wgs84(lat, lon, elevation_m=elv)
+    h_sun: elevation of Sun below horizon. Default is -12 degrees.
+    """
+    ts = load.timescale()
+    eph = load('de421.bsp')
+    observer = eph['Earth'] + site
+
+    now = datetime.now()
+    midnight = now.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=utc)
+    next_midnight = midnight + timedelta(days=2)
+    t0 = ts.from_datetime(midnight)
+    t1 = ts.from_datetime(next_midnight)
+
+    t_set, y = almanac.find_settings(observer, eph['Sun'], t0, t1, horizon_degrees=h_sun)
+    t_rise, y = almanac.find_risings(observer, eph['Sun'], t0, t1, horizon_degrees=h_sun)
+    return t_set[0], t_rise[1]
+
+
+@sat_view_bp.route('/sat_pas/sat_view.html', methods=["POST", "GET"])
 def sat_pas_test():
     """
     TEST
     """
-    from spacetrack import SpaceTrackClient
-    from skyfield.earthlib import refraction
-    from skyfield import almanac
-    from skyfield.units import Angle
-    from skyfield.api import N, S, E, W, load, wgs84, utc, EarthSatellite
-    from datetime import datetime, timedelta
-    from skyfield.iokit import parse_tle_file
-    from io import BytesIO
+    # TODO: make controls to select RSOs SITE & DATE on webpage
 
     site = wgs84.latlon(48.5635505, 22.453751, 231)
     ts = load.timescale()
-    # eph = load('de421.bsp')
+    eph = load('de421.bsp')
+    t0, t1 = calc_t_twilight(site)
+    # print(t1.utc_datetime().strftime("%Y-%m-%d %H:%M:%S"), t2.utc_datetime().strftime("%Y-%m-%d %H:%M:%S"))
 
-    sat_list = [22076, 16908]
+
+    sat_list = [22076, 16908, 25544]
 
     st = SpaceTrackClient('labLKD', 'lablkdSpace2013')
     tle = st.tle_latest(norad_cat_id=sat_list, ordinal=1, epoch='>now-30', format='3le')
     f = BytesIO(str.encode(tle))
     sats = list(parse_tle_file(f, ts))
 
-
-    t0 = ts.utc(2025, 1, 18)
-    t1 = ts.utc(2025, 1, 19)
-    # sat= EarthSatellite(tle[1], tle[2], tle[0], ts)
-
     passes = []
-
     for sat in sats:
         t, events = sat.find_events(site, t0, t1, altitude_degrees=20.0)
         te = [[ti, event] for ti, event in zip(t, events)]
@@ -64,35 +85,37 @@ def sat_pas_test():
 
         # first event should be RISE
         while te[0][1] != 0:
-            print(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
+            current_app.logger.warning(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
 
         t, events = zip(*te)
 
         t_st = [ti for ti, event in zip(t, events) if event == 0 ]
         t_end = [ti for ti, event in zip(t, events) if event == 2 ]
         for tst, tend in zip(t_st, t_end):
-            times = ts.linspace(t0=tst, t1=tend, num=100)
+            times = ts.linspace(t0=tst, t1=tend, num=1000)
             # for t in times:
             difference = sat - site
             topocentric = difference.at(times)
             alt, az, distance = topocentric.altaz()
-            pas = {'norad': sat.model.satnum, 'ts': tst, 'te': tend , "alt": alt.degrees, 'az': az.degrees, 'distance': distance.km}
-            passes.append(pas)
+            sunlit = sat.at(times).is_sunlit(eph)
 
-        # for ti, event in zip(t, events):
-        #     # name = event_names[event]
-        #     print(sat.model.satnum, ti.utc_strftime('%Y %m %d %H:%M:%S'), event)
+            if sat.model.satnum == 22076:
+                prior = 3
+            elif sat.model.satnum == 25544:
+                prior = 1
+            else:
+                prior = 0
 
-    # for pas in passes[0]:
-    #     print(pas)
+            if any(sunlit): # if at least one point is at sunlight add RSO pass to list
+                pas = {'norad': sat.model.satnum,
+                       'priority': prior,
+                       'ts': tst, 'te': tend ,
+                       "alt": alt.degrees.tolist(), 'az': az.degrees.tolist(),
+                       'distance': distance.km.tolist(), 'sunlighted': sunlit.tolist()
+                       }
+                passes.append(pas)
 
+    # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
+    passes = sorted(passes, key=lambda k: (-k['ts'].tdb, k['priority']), reverse=True)
 
-    sat_pas = {
-        "time": ["2025-01-18T10:00:00", "2025-01-18T10:10:00", "2025-01-18T10:20:00",
-                 "2025-01-18T10:30:00", "2025-01-18T10:40:00", "2025-01-18T10:50:00",
-                 "2025-01-18T11:00:00", "2025-01-18T11:10:00", "2025-01-18T11:20:00", "2025-01-18T11:30:00"],
-        "az": [0, 10, 20, 25, 30, 35, 40, 50, 60, 70 ],
-        "alt": [30, 40, 50, 60, 70, 60, 50, 40, 35, 30]
-    }
-
-    return render_template('sat_view.html', data=sat_pas)
+    return render_template('sat_pas/sat_view.html', passes=passes)

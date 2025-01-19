@@ -626,8 +626,38 @@ samp {
 	border-bottom: none !important;
 }
 
-/*.container {*/
-/*  display: flex;*/
-/*  align-items: center;*/
-/*  justify-content: center*/
-/*}*/
+
+/*Sat_pass_table*/
+.sat_pass_table {
+    overflow: auto;
+    width: 100%;
+}
+
+.sat_pass_table table {
+    border: 1px solid #dededf;
+    height: 100%;
+    width: 80%;
+    table-layout: fixed;
+    border-collapse: collapse;
+    border-spacing: 1px;
+    text-align: center;
+}
+
+.sat_pass_table caption {
+    caption-side: top;
+    text-align: left;
+}
+
+.sat_pass_table th {
+    border: 1px solid #dededf;
+    background-color: #eceff1;
+    color: #000000;
+    padding: 5px;
+}
+
+.sat_pass_table td {
+    border: 1px solid #dededf;
+    background-color: #ffffff;
+    color: #000000;
+    padding: 5px;
+}

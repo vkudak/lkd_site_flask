@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block content %}
+{#<div style="display: flex; justify-content: center; align-items: center; width: 80%; background-color: black;">#}
+<div style="display: flex; justify-content: center; align-items: center;">
+
+<div class="sat_pass_table" role="region" tabindex="0">
+<table>
+    <caption>
+        <h3>Satellite Passes</h3>
+    </caption>
+    <thead>
+        <tr>
+            <th>Sat_Name</th>
+            <th>NORAD</th>
+            <th>T_start</th>
+            <th>T_end</th>
+            <th>Priority</th>
+        </tr>
+    </thead>
+    <tbody>
+
+        {% for pas in passes %}
+        <tr>
+            <td></td>
+            <td>{{ pas.norad }}</td>
+            <td>{{ pas.ts.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}</td>
+            <td>{{ pas.te.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}</td>
+            <td>{{ pas.priority }}</td>
+        </tr>
+    {% endfor %}
+
+    </tbody>
+</table>
+</div>
+
+
+
+{#    <div id="skyplot" style="width: 80%; height: 80%;"></div>#}
+    <div id="skyplot" style="display: flex; justify-content: center; align-items: center;"></div>
+</div>
+
+<script type="text/javascript" src="{{url_for('static', filename='js/plotly-2.35.2.min.js')}}"></script>
+
+<script>
+    // Отримання даних із сервера
+    const azimuths = {{ passes[0]['az'] }};
+    const elevations = {{ passes[0]['alt'] }};
+    {#TODO: Change color depending on "Sunlight" parameter#}
+
+    // Конвертація висот для розташування 90° в центрі
+    const rValues = elevations.map(elevation => 90 - elevation);
+    const thetaValues = azimuths;
+
+    // Визначення текстових позначень
+    const labels = thetaValues.map((_, i) => {
+        if (i === 0) return 'b'; // Початкова точка
+        if (i === thetaValues.length - 1) return 'e'; // Кінцева точка
+        return ''; // Інші точки без тексту
+    });
+
+    // Полярні дані для графіка
+    const polarData = {
+        type: 'scatterpolar',
+        mode: 'lines+markers+text', // Лінії, точки та текст
+        r: rValues,
+        theta: thetaValues,
+        text: labels, // Текстові позначення
+        textposition: 'top center', // Розташування тексту
+        textfont: { // Колір і розмір тексту
+            color: 'white',
+            size: 16
+        },
+        hoverinfo: 'theta+r', // Інформація при наведенні
+        marker: {
+            color: 'white',
+            size: 3
+        },
+        line: {
+            color: 'white',
+            width: 2
+        }
+    };
+
+    // Налаштування графіка
+    const layout = {
+        title: {
+            text: 'Satellite NORAD:' + {{ passes[0]['norad'] }} + "<br>" +
+                "{{ passes[0]['ts'].utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}" + " - " +
+                "{{ passes[0]['te'].utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}",
+            font: { color: 'white' }
+        },
+        paper_bgcolor: 'black',
+        polar: {
+            angularaxis: {
+                direction: "clockwise", // Напрямок за годинниковою стрілкою
+                rotation: 90, // Початок осі — північ (90°)
+                gridcolor: 'white',
+                tickcolor: 'white',
+                tickfont: { color: 'white' }
+            },
+            radialaxis: {
+                range: [0, 90], // Висоти у діапазоні [0, 90]
+                gridcolor: 'white',
+                tickcolor: 'white',
+                tickfont: { color: 'white' },
+                tickvals: [0, 15, 30, 50, 70, 90], // Розподіл по висоті
+                ticktext: ['90', '75', '60', '40', '20', '0'], // Відображення висот
+                showticklabels: true
+            },
+            bgcolor: 'black'
+        },
+        showlegend: false
+    };
+
+    // Налаштування для рендерингу
+    const config = {
+        displaylogo: false,
+        displayModeBar: true,
+        {#modeBarButtonsToAdd: ['resetScale2d'], // Add "home" button#}
+        {#responsive: true // Make the plot responsive#}
+        modeBarButtonsToRemove: ['toImage'],
+        modeBarButtonsToAdd: [
+            {
+                name: 'Reset View', // Button name
+                icon: Plotly.Icons.home, // Use a "home" icon
+                click: function (gd) {
+                    // Reset the view
+                    Plotly.relayout(gd, {
+                        'polar.angularaxis.rotation': 90,
+                        'polar.radialaxis.range': [0, 90]
+                    });
+                }
+            }
+        ]
+    };
+
+    // Рендеринг графіка
+    Plotly.newPlot('skyplot', [polarData], layout, config);
+</script>
+{% endblock %}
