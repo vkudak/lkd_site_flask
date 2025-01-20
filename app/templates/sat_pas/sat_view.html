@@ -23,8 +23,8 @@
         <tr>
             <td></td>
             <td>{{ pas.norad }}</td>
-            <td>{{ pas.ts.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}</td>
-            <td>{{ pas.te.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}</td>
+            <td>{{ pas.ts.utc_datetime().strftime("%H:%M:%S") }}</td>
+            <td>{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}</td>
             <td>{{ pas.priority }}</td>
         </tr>
     {% endfor %}
@@ -43,9 +43,12 @@
 
 <script>
     // Отримання даних із сервера
-    const azimuths = {{ passes[0]['az'] }};
-    const elevations = {{ passes[0]['alt'] }};
-    {#TODO: Change color depending on "Sunlight" parameter#}
+    const azimuths = {{ passes[1]['az'] }};
+    const elevations = {{ passes[1]['alt'] }};
+    const sunlit = {{ passes[1]['sunlighted'] }}; // Новий масив із True/False
+    // Визначення кольорів для маркерів залежно від sunlit
+    {#const markerColors = sunlit.map(isSunlit => isSunlit ? 'white' : 'yellow');#}
+    const markerColors = sunlit.map(isSunlit => isSunlit === 1 ? 'white' : '#9c7300');
 
     // Конвертація висот для розташування 90° в центрі
     const rValues = elevations.map(elevation => 90 - elevation);
@@ -72,7 +75,7 @@
         },
         hoverinfo: 'theta+r', // Інформація при наведенні
         marker: {
-            color: 'white',
+            color: markerColors, // Застосування кольорів до маркерів //'white',
             size: 3
         },
         line: {
@@ -86,7 +89,7 @@
         title: {
             text: 'Satellite NORAD:' + {{ passes[0]['norad'] }} + "<br>" +
                 "{{ passes[0]['ts'].utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}" + " - " +
-                "{{ passes[0]['te'].utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}",
+                "{{ passes[0]['te'].utc_datetime().strftime("%H:%M:%S") }}",
             font: { color: 'white' }
         },
         paper_bgcolor: 'black',

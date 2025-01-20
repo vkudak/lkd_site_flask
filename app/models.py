@@ -15,6 +15,9 @@ from app.star_util import t2phases, phase2str
 from flask import current_app
 
 from spacetrack import SpaceTrackClient
+from skyfield.iokit import parse_tle_file
+from skyfield.api import load
+from io import BytesIO
 
 
 db = SQLAlchemy()
@@ -50,10 +53,12 @@ class User(db.Model, UserMixin):
         Return: list where all site are represented as dits
             {"name": name, "lat": lat, "lon": lon, "elev": elev}
         """
-        site_names = db.session.query(cls).order_by(cls.site_name).distinct().all()
-        site_lats = db.session.query(cls).order_by(cls.site_lat).distinct().all()
-        site_lons = db.session.query(cls).order_by(cls.site_lon).distinct().all()
-        site_elevs = db.session.query(cls).order_by(cls.site_elev).distinct().all()
+        site_names, site_lats, site_lons, site_elevs = [], [], [], []
+        for user in cls.get_all():
+            site_names.append(user.site_name)
+            site_lats.append(user.site_lat)
+            site_lons.append(user.site_lon)
+            site_elevs.append(user.site_elev)
 
         sites_data = [
             {"name": name, "lat": lat, "lon": lon, "elev": elev}
@@ -464,19 +469,84 @@ class SatForView(db.Model):
     priority = db.Column(db.Integer, nullable=False, default=0)
     tle = db.Column(db.Text)
 
+    @classmethod
+    def get_all(cls):
+        """
+        Return all Sats for View
+        """
+        sats = db.session.query(cls).order_by(cls.id).all()
+        return sats
+
     def get_tle(self):
-        # if tle_epoch  - epoch > 3:
         try:
             username = os.getenv('ST_USERNAME')
             password = os.getenv('ST_PASSWORD')
             st = SpaceTrackClient(username, password)
             data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
             self.tle = data
+            db.session.commit()
         except Exception as e:
-            current_app.logger.error(f" {e.message}, {e.args}\nCant read SpaceTrack username and password")
+            current_app.logger.error(f" {e}, {e.args}\nCant read SpaceTrack username and password")
             return False
 
         return True
 
-    def get_sat_passes(self, t, interval):
-        pass
+    def get_tle_epoch(self):
+        f = BytesIO(str.encode(self.tle))
+        ts = load.timescale()
+        sat = list(parse_tle_file(f, ts))
+        sat = sat[0]
+        return sat.epoch
+
+    def calc_passes(self, site, t1, t2, min_h=20):
+        # if TLE are 3 days old then get new TLE
+        if self.tle is None or abs(self.get_tle_epoch() - t1) > 3:
+            self.get_tle()
+
+        # Calc Passes
+        ts = load.timescale()
+        eph = load('de421.bsp')
+        f = BytesIO(str.encode(self.tle))
+        sat = list(parse_tle_file(f, ts))
+        sat = sat[0]
+        if self.name == '':
+            self.name = sat.name
+            db.session.commit()
+        passes = []
+
+        t, events = sat.find_events(site, t1, t2, altitude_degrees=min_h)
+        te = [[ti, event] for ti, event in zip(t, events)]
+        # *0 — rise, 1 - culm, 3 - sets
+
+        # first event should be RISE
+        while te[0][1] != 0:
+            current_app.logger.warning(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
+
+
+        t, events = zip(*te)
+
+        t_st = [ti for ti, event in zip(t, events) if event == 0]
+        t_end = [ti for ti, event in zip(t, events) if event == 2]
+        for tst, tend in zip(t_st, t_end):
+            times = ts.linspace(t0=tst, t1=tend, num=300)
+            # for t in times:
+            difference = sat - site
+            topocentric = difference.at(times)
+            alt, az, distance = topocentric.altaz()
+            sunlit = sat.at(times).is_sunlit(eph)
+            sunl = sunlit.tolist()
+            sunl = [int(z) for z in sunl]
+
+            if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
+                pas = {'norad': sat.model.satnum,
+                       'name': sat.name,
+                       'priority': self.priority,
+                       'ts': tst,
+                       'te': tend,
+                       "alt": alt.degrees.tolist(),
+                       'az': az.degrees.tolist(),
+                       'distance': distance.km.tolist(),
+                       'sunlighted': sunl
+                       }
+                passes.append(pas)
+        return passes

@@ -12,7 +12,9 @@ from skyfield.timelib import Timescale
 from wtforms import StringField, MultipleFileField, SubmitField, RadioField, IntegerField
 from wtforms.fields.numeric import DecimalField, FloatField
 from wtforms.validators import Length, DataRequired
-# import datetime
+from flask_wtf import FlaskForm
+from wtforms import DateField, IntegerField, SelectField, SubmitField
+from wtforms.validators import DataRequired
 
 from spacetrack import SpaceTrackClient
 from skyfield.earthlib import refraction
@@ -24,7 +26,7 @@ from skyfield.iokit import parse_tle_file
 from io import BytesIO
 
 from app import cache
-from app.models import Satellite, db, Lightcurve
+from app.models import Satellite, db, Lightcurve, SatForView, User
 from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc, \
     lc_to_file, plot_periods_bokeh
 
@@ -54,68 +56,57 @@ def calc_t_twilight(site, h_sun=-12):
 
 
 @sat_view_bp.route('/sat_pas/sat_view.html', methods=["POST", "GET"])
-def sat_pas_test():
+def sat_passes(site, date_start, sat_selected, min_sat_h):
     """
-    TEST
+    Calculate passes for all selected satellites
     """
-    # TODO: make controls to select RSOs SITE & DATE on webpage
 
     site = wgs84.latlon(48.5635505, 22.453751, 231)
-    ts = load.timescale()
-    eph = load('de421.bsp')
     t0, t1 = calc_t_twilight(site)
-    # print(t1.utc_datetime().strftime("%Y-%m-%d %H:%M:%S"), t2.utc_datetime().strftime("%Y-%m-%d %H:%M:%S"))
 
-
-    sat_list = [22076, 16908, 25544]
-
-    st = SpaceTrackClient('labLKD', 'lablkdSpace2013')
-    tle = st.tle_latest(norad_cat_id=sat_list, ordinal=1, epoch='>now-30', format='3le')
-    f = BytesIO(str.encode(tle))
-    sats = list(parse_tle_file(f, ts))
-
+    sats = SatForView.get_all()
     passes = []
     for sat in sats:
-        t, events = sat.find_events(site, t0, t1, altitude_degrees=20.0)
-        te = [[ti, event] for ti, event in zip(t, events)]
-
-        # *0 — Satellite rose above
-        # * 1 — Satellite culminated
-        # * 2 — Satellite fell below
-
-        # first event should be RISE
-        while te[0][1] != 0:
-            current_app.logger.warning(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
-
-        t, events = zip(*te)
-
-        t_st = [ti for ti, event in zip(t, events) if event == 0 ]
-        t_end = [ti for ti, event in zip(t, events) if event == 2 ]
-        for tst, tend in zip(t_st, t_end):
-            times = ts.linspace(t0=tst, t1=tend, num=1000)
-            # for t in times:
-            difference = sat - site
-            topocentric = difference.at(times)
-            alt, az, distance = topocentric.altaz()
-            sunlit = sat.at(times).is_sunlit(eph)
-
-            if sat.model.satnum == 22076:
-                prior = 3
-            elif sat.model.satnum == 25544:
-                prior = 1
-            else:
-                prior = 0
-
-            if any(sunlit): # if at least one point is at sunlight add RSO pass to list
-                pas = {'norad': sat.model.satnum,
-                       'priority': prior,
-                       'ts': tst, 'te': tend ,
-                       "alt": alt.degrees.tolist(), 'az': az.degrees.tolist(),
-                       'distance': distance.km.tolist(), 'sunlighted': sunlit.tolist()
-                       }
-                passes.append(pas)
+        sp = sat.calc_passes(site, t0, t1, min_h=min_sat_h)
+        passes.extend(sp)
 
     # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
     passes = sorted(passes, key=lambda k: (-k['ts'].tdb, k['priority']), reverse=True)
 
     return render_template('sat_pas/sat_view.html', passes=passes)
+
+
+@sat_view_bp.route('/sat_pas/sat_select.html', methods=['GET', 'POST'])
+def sat_select():
+    form = SatelliteTrackingForm()
+    locations = User.get_all_sites()
+    loc_res = [(locations.index(loc)+1, loc) for loc in locations]
+    form.location.choices = [(locations.index(loc), loc['name']) for loc in locations]
+
+    if form.validate_on_submit():
+        selected_satellites = request.form.getlist('selected_satellites')
+        observation_date = form.observation_date.data
+        elevation = form.elevation.data
+        location_id = form.location.data
+        # Логіка обробки
+        print(location_id, observation_date, elevation, selected_satellites)
+        # Логіка обробки обраних супутників...
+        return redirect(url_for('sat_passes'))
+        # TODO: Add link to sat_passes with all date for calculation
+
+    satellites = SatForView.query.all()
+
+    today = datetime.now().strftime('%Y-%m-%d')  # Сьогоднішня дата
+    return render_template('sat_pas/sat_select.html',
+                           form=form,
+                           satellites=satellites,
+                           locations=loc_res,
+                           today=today
+                           )
+
+
+class SatelliteTrackingForm(FlaskForm):
+    observation_date = DateField('Observation Date', format='%Y-%m-%d', validators=[DataRequired()])
+    elevation = IntegerField('Minimum Elevation (degrees)', validators=[DataRequired()])
+    location = SelectField('Observation Location', coerce=int, validators=[DataRequired()])
+    submit = SubmitField('Submit')
