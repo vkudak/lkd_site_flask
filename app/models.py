@@ -477,14 +477,24 @@ class SatForView(db.Model):
         sats = db.session.query(cls).order_by(cls.id).all()
         return sats
 
-    def get_tle(self):
+    def get_tle(self, t=None):
+        if t is None:
+            t_st = 'now'
+        else:
+            t_st = t.utc_datetime().strftime("%Y-%m-%d")
+
         try:
             username = os.getenv('ST_USERNAME')
             password = os.getenv('ST_PASSWORD')
             st = SpaceTrackClient(username, password)
-            data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
-            self.tle = data
-            db.session.commit()
+            # data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
+            data = st.tle(norad_cat_id=[self.norad], epoch=f'<={t_st}',  orderby='epoch desc', limit=1, format='3le')
+            if data:
+                self.tle = data
+                db.session.commit()
+            else:
+                return False
+
         except Exception as e:
             current_app.logger.error(f" {e}, {e.args}\nCant read SpaceTrack username and password")
             return False
@@ -501,7 +511,7 @@ class SatForView(db.Model):
     def calc_passes(self, site, t1, t2, min_h=20):
         # if TLE are 3 days old then get new TLE
         if self.tle is None or abs(self.get_tle_epoch() - t1) > 3:
-            self.get_tle()
+            self.get_tle(t1)
 
         # Calc Passes
         ts = load.timescale()
@@ -540,7 +550,7 @@ class SatForView(db.Model):
             if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
                 pas = {'norad': sat.model.satnum,
                        'name': sat.name,
-                       'priority': self.priority,
+                       'priority': int(self.priority),
                        'ts': tst,
                        'te': tend,
                        "alt": alt.degrees.tolist(),

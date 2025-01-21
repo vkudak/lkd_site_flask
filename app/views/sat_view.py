@@ -3,7 +3,8 @@ import sys
 from operator import itemgetter
 
 import numpy as np
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify, Response
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify, Response, \
+    render_template_string
 from flask import send_file
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
@@ -34,17 +35,22 @@ sat_view_bp = Blueprint('sat_view', __name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
-def calc_t_twilight(site, h_sun=-12):
+def calc_t_twilight(site, date=None, h_sun=-12):
     """
     Calculate twilight time according to h_sun
     site: observational site. Create by api.Topos(lat, lon, elevation_m=elv) or api.wgs84(lat, lon, elevation_m=elv)
+    date: is date in str format 'YYYY-MM-DD'
     h_sun: elevation of Sun below horizon. Default is -12 degrees.
     """
     ts = load.timescale()
     eph = load('de421.bsp')
     observer = eph['Earth'] + site
 
-    now = datetime.now()
+    if date is None:
+        now = datetime.now()
+    else:
+        now = datetime.strptime(date, '%Y-%m-%d')
+
     midnight = now.replace(hour=0, minute=0, second=0, microsecond=0, tzinfo=utc)
     next_midnight = midnight + timedelta(days=2)
     t0 = ts.from_datetime(midnight)
@@ -56,25 +62,42 @@ def calc_t_twilight(site, h_sun=-12):
 
 
 @sat_view_bp.route('/sat_pas/sat_view.html', methods=["POST", "GET"])
-def sat_passes(site, date_start, sat_selected, min_sat_h):
+def sat_passes(): #site, date_start, sat_selected, min_sat_h):
     """
     Calculate passes for all selected satellites
     """
+    if request.method == "POST":
+        # location_id = request.form.get('location_id')
+        date_start = request.form.get('observation_date')
+        min_sat_h = request.form.get('elevation')
+        s_sat = request.form.getlist('selected_satellites')
+        # print('request form is:', request)
+        # # print(request.form)
+        # s_sat = request.form.getlist('selected_satellites')
+        # date_start = request.form.get('observation_date')
+        # min_sat_h = request.form.get('elevation')
 
-    site = wgs84.latlon(48.5635505, 22.453751, 231)
-    t0, t1 = calc_t_twilight(site)
+        # print(s_sat, date_start, min_sat_h)
 
-    sats = SatForView.get_all()
-    passes = []
-    for sat in sats:
-        sp = sat.calc_passes(site, t0, t1, min_h=min_sat_h)
-        passes.extend(sp)
+        # TODO: Create SITE from selected site
+        site = wgs84.latlon(48.5635505, 22.453751, 231)
+        t0, t1 = calc_t_twilight(site, date_start)
 
-    # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
-    passes = sorted(passes, key=lambda k: (-k['ts'].tdb, k['priority']), reverse=True)
+        sats = SatForView.get_all()
+        sats = [sat for sat in sats if str(sat.norad) in s_sat]
+        # print(f'sats is {sats}')
+        passes = []
+        for sat in sats:
+            sp = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
+            passes.extend(sp)
 
-    return render_template('sat_pas/sat_view.html', passes=passes)
+        # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
+        passes = sorted(passes, key=lambda k: (k['priority'], -k['ts'].tdb ), reverse=True)
 
+        return render_template('sat_pas/sat_view.html', passes=passes)
+    else:
+        # return render_template_string('PageNotFound {{ errorCode }}', errorCode='404'), 404
+        return render_template_string('This entry goes not suppose to have respond for GET request'), 404
 
 @sat_view_bp.route('/sat_pas/sat_select.html', methods=['GET', 'POST'])
 def sat_select():
@@ -88,11 +111,11 @@ def sat_select():
         observation_date = form.observation_date.data
         elevation = form.elevation.data
         location_id = form.location.data
-        # Логіка обробки
-        print(location_id, observation_date, elevation, selected_satellites)
-        # Логіка обробки обраних супутників...
-        return redirect(url_for('sat_passes'))
-        # TODO: Add link to sat_passes with all date for calculation
+    #     # Логіка обробки
+    #     print(location_id, observation_date, elevation, selected_satellites)
+    #     # Логіка обробки обраних супутників...
+        return redirect(url_for('sat_view.sat_passes'))
+    #     # TODO: Add link to sat_passes with all date for calculation
 
     satellites = SatForView.query.all()
 
