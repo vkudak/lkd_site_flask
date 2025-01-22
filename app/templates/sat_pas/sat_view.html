@@ -1,77 +1,66 @@
 {% extends 'base.html' %}
 {% block content %}
-{#<div style="display: flex; justify-content: center; align-items: center; width: 80%; background-color: black;">#}
 <div style="display: flex; justify-content: center; align-items: center;">
+    <!-- Таблиця проходжень супутників -->
+    <div class="sat_pass_table" role="region" tabindex="0" style="display: flex; justify-content: center; align-items: center;">
+        <table style="table-layout: auto;">
+            <caption>
+                <h3> Satellite Passes for <b>{{ site_name }}</b> <br>Date: {{ date_start }}</h3>
+            </caption>
+            <thead>
+                <tr>
+                    <th>Sat_Name</th>
+                    <th>NORAD</th>
+                    <th>T_Date</th>
+                    <th>T_start</th>
+                    <th>T_end</th>
+                    <th>Priority</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pas in passes %}
+                <tr style="font-size: 12px">
+                    <td>{{ pas.name }}</td>
+                    <td>{{ pas.norad }}</td>
+                    <td>{{ pas.ts.utc_datetime().strftime("%Y-%m-%d") }}</td>
+                    <td>{{ pas.ts.utc_datetime().strftime("%H:%M:%S") }}</td>
+                    <td>{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}</td>
+                    <td>{{ pas.priority }}</td>
+                    <td>
+                        <button class="select-pass-btn"
+                                style="font-size: 12px; padding: 10px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;"
+                                data-azimuths='{{ pas.az }}'
+                                data-elevations='{{ pas.alt }}'
+                                data-sunlit='{{ pas.sunlighted }}'
+                                data-name='{{ pas.name }}'
+                                data-norad='{{ pas.norad }}'
+                                data-start='{{ pas.ts.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}'
+                                data-end='{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}'>
+                            View Plot
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-<div class="sat_pass_table" role="region" tabindex="0">
-<table>
-    <caption>
-        <h3>Satellite Passes</h3>
-    </caption>
-    <thead>
-        <tr>
-            <th>Sat_Name</th>
-            <th>NORAD</th>
-            <th>T_Date</th>
-            <th>T_start</th>
-            <th>T_end</th>
-            <th>Priority</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-
-        {% for pas in passes %}
-        <tr>
-            <td>{{ pas.name }}</td>
-            <td>{{ pas.norad }}</td>
-            <td>{{ pas.ts.utc_datetime().strftime("%Y-%m-%d") }}</td>
-            <td>{{ pas.ts.utc_datetime().strftime("%H:%M:%S") }}</td>
-            <td>{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}</td>
-            <td>{{ pas.priority }}</td>
-            <td>
-                <!-- Add a button for selecting this pass -->
-                <button class="select-pass-btn"
-                        data-azimuths='{{ pas.az }}'
-                        data-elevations='{{ pas.alt }}'
-                        data-sunlit='{{ pas.sunlighted }}'
-                        data-name='{{ pas.name }}'
-                        data-norad='{{ pas.norad }}'
-                        data-start='{{ pas.ts.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}'
-                        data-end='{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}'>
-                    View Plot
-                </button>
-            </td>
-        </tr>
-    {% endfor %}
-
-    </tbody>
-</table>
-</div>
-
-
-
-{#    <div id="skyplot" style="width: 80%; height: 80%;"></div>#}
-    <div id="skyplot" style="display: flex; justify-content: center; align-items: center;"></div>
+    <!-- Порожній SkyPlot -->
+    <div id="skyplot" style="width: 80%; height: 80%; margin-top: 20px;"></div>
 </div>
 
 <script type="text/javascript" src="{{url_for('static', filename='js/plotly-2.35.2.min.js')}}"></script>
-
 <script>
-    // Function to update the plot dynamically
-    function updatePlot(azimuths, elevations, sunlit, name, norad, start, end) {
-        const markerColors = sunlit.map(isSunlit => isSunlit === 1 ? 'white' : '#9c7300');
-        const rValues = elevations.map(elevation => 90 - elevation);
-        const thetaValues = azimuths;
-
-        const polarData = {
+    // Функція для створення порожнього SkyPlot
+    function createEmptyPlot() {
+        const emptyData = {
             type: 'scatterpolar',
-            mode: 'lines+markers+text',
-            r: rValues,
-            theta: thetaValues,
-            hoverinfo: 'theta+r',
+            mode: 'lines+markers',
+            r: [], // Порожні дані
+            theta: [],
             marker: {
-                color: markerColors,
+                color: 'white',
                 size: 3
             },
             line: {
@@ -82,10 +71,17 @@
 
         const layout = {
             title: {
-                text: `Satellite Name: ${name}<br>NORAD: ${norad}<br>${start} - ${end}`,
+                text: 'Skyplot (No Data)',
                 font: { color: 'white', size: 14 },
-                y: 0.95
+                y: 0.95,
+                x:0
             },
+            margin: {
+                    l: 10, // Лівий відступ
+                    r: 10, // Правий відступ
+                    t: 30, // Верхній відступ
+                    b: 30  // Нижній відступ
+                },
             paper_bgcolor: 'black',
             polar: {
                 angularaxis: {
@@ -97,7 +93,7 @@
                 },
                 radialaxis: {
                     range: [0, 90],
-                    gridcolor: 'white',
+                    gridcolor: 'green',
                     tickcolor: 'white',
                     tickfont: { color: 'white' },
                     tickvals: [0, 15, 30, 50, 70, 90],
@@ -114,10 +110,13 @@
             modeBarButtonsToRemove: ['toImage']
         };
 
-        Plotly.newPlot('skyplot', [polarData], layout, config);
+        Plotly.newPlot('skyplot', [emptyData], layout, config);
     }
 
-    // Event listener for buttons
+    // Створення порожнього графіка при завантаженні
+    createEmptyPlot();
+
+    // Оновлення SkyPlot після натискання кнопки
     document.querySelectorAll('.select-pass-btn').forEach(button => {
         button.addEventListener('click', () => {
             const azimuths = JSON.parse(button.getAttribute('data-azimuths'));
@@ -128,8 +127,85 @@
             const start = button.getAttribute('data-start');
             const end = button.getAttribute('data-end');
 
-            // Update the plot with the selected pass data
-            updatePlot(azimuths, elevations, sunlit, name, norad, start, end);
+            const markerColors = sunlit.map(isSunlit => isSunlit === 1 ? 'white' : '#9c7300');
+            const rValues = elevations.map(elevation => 90 - elevation);
+
+            const polarData = {
+                type: 'scatterpolar',
+                mode: 'markers',
+                r: rValues,
+                theta: azimuths,
+                hoverinfo: 'theta+r',
+                marker: {
+                    color: markerColors,
+                    size: 2
+                },
+                line: {
+                    color: 'white',
+                    width: 2
+                }
+            };
+
+            const layout = {
+                title: {
+                    text: `Satellite Name: ${name}<br>NORAD: ${norad}`,
+                    font: { color: 'white', size: 14 },
+                    {#y: 0.95,#}
+                    y:0.95,
+                    {#automargin:true,#}
+                    x:0,
+                    xanchor: 'left'
+                },
+                margin: {
+                    l: 10, // Лівий відступ
+                    r: 10, // Правий відступ
+                    t: 30, // Верхній відступ
+                    b: 30  // Нижній відступ
+                },
+                annotations: [
+                    {
+                        x: 0.0, // По центру графіка
+                        y: -0.05, //-0.25, // Нижче графіка
+                        text: `${start} - ${end}`,
+                        showarrow: false,
+                        font: {
+                            color: 'white',
+                            size: 14
+                        },
+                        xref: 'paper', // Прив'язка до графіка
+                        yref: 'paper'  // Прив'язка до графіка
+                    }
+                ],
+                paper_bgcolor: 'black',
+                polar: {
+                    angularaxis: {
+                        direction: "clockwise",
+                        rotation: 90,
+                        gridcolor: 'white',
+                        tickcolor: 'white',
+                        tickfont: { color: 'white' }
+                    },
+                    radialaxis: {
+                        range: [0, 90],
+                        gridcolor: 'green',
+                        tickcolor: 'white',
+                        tickfont: { color: 'white' },
+                        tickvals: [0, 15, 30, 50, 70, 90],
+                        ticktext: ['90', '75', '60', '40', '20', '0'],
+                        showticklabels: true
+                    },
+                    bgcolor: 'black'
+                },
+                showlegend: false
+            };
+
+            const config = {
+                responsive: true, // Адаптація розміру
+                displaylogo: false,
+                modeBarButtonsToRemove: ['toImage']
+            };
+
+            Plotly.newPlot('skyplot', [polarData], layout, config);
         });
     });
 </script>

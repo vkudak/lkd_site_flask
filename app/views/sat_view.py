@@ -67,25 +67,30 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
     Calculate passes for all selected satellites
     """
     if request.method == "POST":
-        # location_id = request.form.get('location_id')
+        locations = User.get_all_sites()
+        loc_res = [(locations.index(loc) + 1, loc) for loc in locations]
+
+        location_id = request.form.get('location')
         date_start = request.form.get('observation_date')
         min_sat_h = request.form.get('elevation')
-        s_sat = request.form.getlist('selected_satellites')
-        # print('request form is:', request)
-        # # print(request.form)
-        # s_sat = request.form.getlist('selected_satellites')
-        # date_start = request.form.get('observation_date')
-        # min_sat_h = request.form.get('elevation')
+        selected_sat = request.form.getlist('selected_satellites')
 
-        # print(s_sat, date_start, min_sat_h)
+        my_loc = [loc[1] for loc in loc_res if loc[0] == int(location_id)]
+        if my_loc:
+            my_loc = my_loc[0]
+            site = wgs84.latlon(my_loc['lat'], my_loc['lon'], my_loc['elev'])
+        else:
+            # Default site
+            site = wgs84.latlon(48.5635505, 22.453751, 231)
 
-        # TODO: Create SITE from selected site
-        site = wgs84.latlon(48.5635505, 22.453751, 231)
+        # site = wgs84.latlon(48.5635505, 22.453751, 231)
+        # site = wgs84.latlon(my_loc['lat'], my_loc['lon'], my_loc['elev'])
         t0, t1 = calc_t_twilight(site, date_start)
 
         sats = SatForView.get_all()
-        sats = [sat for sat in sats if str(sat.norad) in s_sat]
-        # print(f'sats is {sats}')
+        # leave only selecter Satellites
+        sats = [sat for sat in sats if str(sat.norad) in selected_sat]
+
         passes = []
         for sat in sats:
             sp = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
@@ -94,10 +99,15 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
         # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
         passes = sorted(passes, key=lambda k: (k['priority'], -k['ts'].tdb ), reverse=True)
 
-        return render_template('sat_pas/sat_view.html', passes=passes)
+        return render_template('sat_pas/sat_view.html',
+                               passes=passes,
+                               site_name=my_loc['name'],
+                               date_start=date_start
+                               )
     else:
         # return render_template_string('PageNotFound {{ errorCode }}', errorCode='404'), 404
         return render_template_string('This entry goes not suppose to have respond for GET request'), 404
+
 
 @sat_view_bp.route('/sat_pas/sat_select.html', methods=['GET', 'POST'])
 def sat_select():
@@ -105,17 +115,18 @@ def sat_select():
     locations = User.get_all_sites()
     loc_res = [(locations.index(loc)+1, loc) for loc in locations]
     form.location.choices = [(locations.index(loc), loc['name']) for loc in locations]
+    print(loc_res)
 
     if form.validate_on_submit():
-        selected_satellites = request.form.getlist('selected_satellites')
-        observation_date = form.observation_date.data
-        elevation = form.elevation.data
-        location_id = form.location.data
+        # selected_satellites = request.form.getlist('selected_satellites')
+        # observation_date = form.observation_date.data
+        # elevation = form.elevation.data
+        # location_id = form.location.data
     #     # Логіка обробки
     #     print(location_id, observation_date, elevation, selected_satellites)
     #     # Логіка обробки обраних супутників...
+        request.loc_res = loc_res
         return redirect(url_for('sat_view.sat_passes'))
-    #     # TODO: Add link to sat_passes with all date for calculation
 
     satellites = SatForView.query.all()
 
@@ -126,6 +137,30 @@ def sat_select():
                            locations=loc_res,
                            today=today
                            )
+
+
+@sat_view_bp.route('/sat_pas/delete_satellite/<int:norad>', methods=['POST'])
+def delete_satellite(norad):
+    satellite = SatForView.query.filter_by(norad=norad).first()
+    if satellite:
+        db.session.delete(satellite)
+        db.session.commit()
+        flash(f"Satellite with NORAD ID {norad} deleted successfully.", "success")
+    else:
+        flash(f"Satellite with NORAD ID {norad} not found.", "error")
+    return redirect(url_for('sat_view.sat_select'))
+
+
+@sat_view_bp.route('/sat_pas/add_satellite', methods=['POST'])
+def add_satellite():
+    norad = request.form['norad']
+    priority = request.form['priority']
+
+    new_satellite = SatForView(norad=int(norad), cospar='', name='', priority=int(priority))
+    db.session.add(new_satellite)
+    db.session.commit()
+    flash(f"Satellite {norad} added successfully.", "success")
+    return redirect(url_for('sat_view.sat_select'))
 
 
 class SatelliteTrackingForm(FlaskForm):

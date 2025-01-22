@@ -39,6 +39,9 @@
                         <th style="text-align:center;">COSPAR ID</th>
                         <th style="text-align:center;">Name</th>
                         <th style="text-align:center;">Priority</th>
+                        {% if current_user.sat_access %}
+                            <th style="text-align:center;">Actions</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -49,12 +52,21 @@
                         <td>{{ satellite.cospar }}</td>
                         <td>{{ satellite.name }}</td>
                         <td>{{ satellite.priority }}</td>
+                        {% if current_user.sat_access %}
+                            <td>
+                                <!-- Кнопка для видалення супутника -->
+                                <form method="POST" action="{{ url_for('sat_view.delete_satellite', norad=satellite.norad) }}" style="display: inline;">
+                                    {{ form.hidden_tag() }}
+                                    <button type="submit" style="font-size: 12px; padding: 5px 10px; background-color: red; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-
-
 
         <!-- Кнопка Submit -->
         <div style="margin-top: 20px; text-align: center;">
@@ -65,10 +77,34 @@
     </div>
 </form>
 
+   <!-- Форма для додавання нового супутника -->
+    <div style="margin-top: 50px; text-align: center;">
+        <details style="display: inline-block; width: 100%; max-width: 400px;">
+            <summary style="font-size: 16px; cursor: pointer;">Add New Satellite</summary>
+            <form method="POST" action="{{ url_for('sat_view.add_satellite') }}" style="margin-top: 10px;">
+                {{ form.hidden_tag() }} <!-- CSRF-токен -->
+                <div style="text-align: right; width: 80%">
+                    <label for="norad">NORAD ID:</label>
+                    <input style="width:30%;" type="number" id="norad" name="norad" required>
+                </div>
+
+                <div style="text-align: right; width: 80%">
+                    <label for="priority">Priority:</label>
+                    <input style="width:30%;" type="number" id="priority" name="priority" value="0" required>
+                </div>
+                <button type="submit" style="font-size: 14px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                    Add Satellite
+                </button>
+            </form>
+        </details>
+    </div>
+
 <script>
     // Ініціалізація DataTable для зручності
     $(document).ready(function () {
         $('#satellites-table').DataTable();
     });
 </script>
+
+
 {% endblock %}
