@@ -3,19 +3,19 @@
 <div style="display: flex; justify-content: center; align-items: center;">
     <!-- Таблиця проходжень супутників -->
     <div class="sat_pass_table" role="region" tabindex="0" style="display: flex; justify-content: center; align-items: center;">
-        <table style="table-layout: auto;">
+        <table id="sat_passes" style="table-layout: auto;">
             <caption>
                 <h3> Satellite Passes for <b>{{ site_name }}</b> <br>Date: {{ date_start }}</h3>
             </caption>
             <thead>
                 <tr>
-                    <th>Sat_Name</th>
-                    <th>NORAD</th>
-                    <th>T_Date</th>
-                    <th>T_start</th>
-                    <th>T_end</th>
-                    <th>Priority</th>
-                    <th>Action</th>
+                    <th style="text-align:center;">Sat_Name</th>
+                    <th style="text-align:center;">NORAD</th>
+                    <th style="text-align:center;">T_Date</th>
+                    <th style="text-align:center;">T_start</th>
+                    <th style="text-align:center;">T_end</th>
+                    <th style="text-align:center;">Priority</th>
+                    <th style="text-align:center;">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -29,7 +29,8 @@
                     <td>{{ pas.priority }}</td>
                     <td>
                         <button class="select-pass-btn"
-                                style="font-size: 12px; padding: 10px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;"
+{#                                style="font-size: 12px; padding: 10px 10px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;"#}
+                                style="font-size: 12px; padding: 2px 5px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;"
                                 data-azimuths='{{ pas.az }}'
                                 data-elevations='{{ pas.alt }}'
                                 data-sunlit='{{ pas.sunlighted }}'
@@ -130,12 +131,17 @@
             const markerColors = sunlit.map(isSunlit => isSunlit === 1 ? 'white' : '#9c7300');
             const rValues = elevations.map(elevation => 90 - elevation);
 
+            const el = rValues.map(elevation => 90 - elevation);
+
             const polarData = {
                 type: 'scatterpolar',
                 mode: 'markers',
                 r: rValues,
                 theta: azimuths,
+                el: el,
                 hoverinfo: 'theta+r',
+                hovertemplate: 'El: %{customdata:.2f}<br>Az: %{theta:.2f} <extra></extra>', // Кастомна підказка
+                customdata: rValues.map(r => 90 - r), // Обчислюємо 90 - r для кожної точки
                 marker: {
                     color: markerColors,
                     size: 2
@@ -190,7 +196,7 @@
                         gridcolor: 'green',
                         tickcolor: 'white',
                         tickfont: { color: 'white' },
-                        tickvals: [0, 15, 30, 50, 70, 90],
+                        tickvals: [0, 15, 30, 50, 70, 890],
                         ticktext: ['90', '75', '60', '40', '20', '0'],
                         showticklabels: true
                     },
@@ -207,6 +213,25 @@
 
             Plotly.newPlot('skyplot', [polarData], layout, config);
         });
+    });
+</script>
+
+
+<script>
+    // Ініціалізація DataTable для зручності
+    $(document).ready(function () {
+        $('#sat_passes').DataTable(
+            {
+                scrollY: '400px', // Максимальна висота таблиці
+                scrollCollapse: true, // Дозволяє стискати таблицю, якщо рядків мало
+                paging: false, // Вимикає пагінацію
+                searching: false, // Вимикає пошук
+                order: [
+                    [5, 'dsc'], // Сортування за колонкою Priority (індекс 4) за зростанням
+                    [3, 'asc']  // Сортування за колонкою T_start (індекс 3) за зростанням
+                ]
+            }
+        );
     });
 </script>
 {% endblock %}

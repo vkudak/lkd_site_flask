@@ -1,5 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
+<script type="text/javascript">
+function confirmAction(){
+      var confirmed = confirm("Are you sure? This will DELETE Satellite from View DataBase");
+      return confirmed;
+}
+</script>
 
 {#<form method="POST" action="{{ url_for('sat_view.sat_passes') }}">#}
 <form method="POST" action="{{ url_for('sat_view.sat_passes') }}">
@@ -57,7 +63,7 @@
                                 <!-- Кнопка для видалення супутника -->
                                 <form method="POST" action="{{ url_for('sat_view.delete_satellite', norad=satellite.norad) }}" style="display: inline;">
                                     {{ form.hidden_tag() }}
-                                    <button type="submit" style="font-size: 12px; padding: 5px 10px; background-color: red; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                                    <button type="submit" id="red_btn" onclick='return confirmAction()'>
                                         Delete
                                     </button>
                                 </form>
@@ -70,7 +76,7 @@
 
         <!-- Кнопка Submit -->
         <div style="margin-top: 20px; text-align: center;">
-            <button type="submit" style="font-size: 14px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+            <button id="green_btn" type="submit">
                 Submit
             </button>
         </div>
@@ -92,7 +98,7 @@
                     <label for="priority">Priority:</label>
                     <input style="width:30%;" type="number" id="priority" name="priority" value="0" required>
                 </div>
-                <button type="submit" style="font-size: 14px; padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">
+                <button id="green_btn" type="submit">
                     Add Satellite
                 </button>
             </form>
@@ -102,7 +108,13 @@
 <script>
     // Ініціалізація DataTable для зручності
     $(document).ready(function () {
-        $('#satellites-table').DataTable();
+        $('#satellites-table').DataTable(
+            {
+                scrollY: '400px', // Максимальна висота таблиці
+                scrollCollapse: true, // Дозволяє стискати таблицю, якщо рядків мало
+                paging: false // Вимикає пагінацію
+            }
+        );
     });
 </script>
 

@@ -661,3 +661,21 @@ samp {
     color: #000000;
     padding: 5px;
 }
+
+#green_btn {
+	font-size: 14px;
+	padding: 10px 20px;
+	background-color: #4CAF50;
+	color: white; border: none;
+	border-radius: 5px;
+	cursor: pointer;
+}
+
+#red_btn {
+	font-size: 12px;
+	padding: 5px 10px;
+	background-color: red;
+	color: white; border: none;
+	border-radius: 3px;
+	cursor: pointer;"
+}

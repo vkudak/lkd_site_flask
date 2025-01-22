@@ -96,8 +96,9 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
             sp = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
             passes.extend(sp)
 
-        # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
-        passes = sorted(passes, key=lambda k: (k['priority'], -k['ts'].tdb ), reverse=True)
+        # # sorting
+        # # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
+        # passes = sorted(passes, key=lambda k: (k['priority'], -k['ts'].tdb ), reverse=True)
 
         return render_template('sat_pas/sat_view.html',
                                passes=passes,

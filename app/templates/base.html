@@ -81,16 +81,17 @@ Released   : 20120205
       <br class="clearfix" />
     </div>
 
-
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li style="color:red">{{ message }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-{% endwith %}
+<div id="flask_messages" style="text-align: center;">
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li style="color:red">{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    {% endwith %}
+</div>
 
 </div>
 <div id="footer">
