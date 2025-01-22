@@ -110,37 +110,44 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
 
 
 @sat_view_bp.route('/sat_pas/sat_select.html', methods=['GET', 'POST'])
+@login_required
 def sat_select():
-    form = SatelliteTrackingForm()
-    locations = User.get_all_sites()
-    loc_res = [(locations.index(loc)+1, loc) for loc in locations]
-    form.location.choices = [(locations.index(loc), loc['name']) for loc in locations]
-    print(loc_res)
+    if current_user.sat_access:
+        form = SatelliteTrackingForm()
+        locations = User.get_all_sites()
+        loc_res = [(locations.index(loc)+1, loc) for loc in locations]
+        form.location.choices = [(locations.index(loc), loc['name']) for loc in locations]
 
-    if form.validate_on_submit():
-        # selected_satellites = request.form.getlist('selected_satellites')
-        # observation_date = form.observation_date.data
-        # elevation = form.elevation.data
-        # location_id = form.location.data
-    #     # Логіка обробки
-    #     print(location_id, observation_date, elevation, selected_satellites)
-    #     # Логіка обробки обраних супутників...
-        request.loc_res = loc_res
-        return redirect(url_for('sat_view.sat_passes'))
+        # if method = POST
+        if form.validate_on_submit():
+            # selected_satellites = request.form.getlist('selected_satellites')
+            # observation_date = form.observation_date.data
+            # elevation = form.elevation.data
+            # location_id = form.location.data
+        #     # Логіка обробки
+            request.loc_res = loc_res
+            return redirect(url_for('sat_view.sat_passes'))
 
-    satellites = SatForView.query.all()
+        satellites = SatForView.query.all()
 
-    today = datetime.now().strftime('%Y-%m-%d')  # Сьогоднішня дата
-    return render_template('sat_pas/sat_select.html',
-                           form=form,
-                           satellites=satellites,
-                           locations=loc_res,
-                           today=today
-                           )
+        today = datetime.now().strftime('%Y-%m-%d')  # Сьогоднішня дата
+        return render_template('sat_pas/sat_select.html',
+                               form=form,
+                               satellites=satellites,
+                               locations=loc_res,
+                               today=today
+                               )
+    else:
+        flash("User has no rights for Satellite section. Contact admin please.")
+        return redirect(url_for('home.index'))
 
 
 @sat_view_bp.route('/sat_pas/delete_satellite/<int:norad>', methods=['POST'])
 def delete_satellite(norad):
+    """
+    Delete Sat_View from DataBase by norad number
+    norad: int
+    """
     satellite = SatForView.query.filter_by(norad=norad).first()
     if satellite:
         db.session.delete(satellite)
@@ -153,6 +160,9 @@ def delete_satellite(norad):
 
 @sat_view_bp.route('/sat_pas/add_satellite', methods=['POST'])
 def add_satellite():
+    """
+    Add Sat_View to DataBase by Norad number and Priority
+    """
     norad = request.form['norad']
     priority = request.form['priority']
 
