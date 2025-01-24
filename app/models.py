@@ -516,11 +516,11 @@ class SatForView(db.Model):
         if self.tle == '' or abs(self.get_tle_epoch() - t1) > 3:
             self.get_tle(t1)
 
-        print(self.norad)
-        print(self.tle)
         # Calc Passes
         ts = load.timescale()
         eph = load('de421.bsp')
+        earth = eph['Earth']
+        moon = eph['Moon']
         f = BytesIO(str.encode(self.tle))
         sat = list(parse_tle_file(f, ts))
         sat = sat[0]
@@ -533,6 +533,11 @@ class SatForView(db.Model):
         t, events = sat.find_events(site, t1, t2, altitude_degrees=min_h)
         te = [[ti, event] for ti, event in zip(t, events)]
         # *0 — rise, 1 - culm, 3 - sets
+
+        # Moon AltAz
+        m_site = earth + site
+        m_alt, m_az, _ = m_site.at(t1).observe(moon).apparent().altaz()
+        # print(m_az.degrees, m_alt.degrees)
 
         if te: # if there are some transits
             # first event should be RISE
@@ -562,7 +567,8 @@ class SatForView(db.Model):
                            "alt": alt.degrees.tolist(),
                            'az': az.degrees.tolist(),
                            'distance': distance.km.tolist(),
-                           'sunlighted': sunl
+                           'sunlighted': sunl,
+                           'moon':[m_alt.degrees, m_az.degrees]
                            }
                     passes.append(pas)
         return passes

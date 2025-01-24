@@ -37,7 +37,8 @@
                                 data-name='{{ pas.name }}'
                                 data-norad='{{ pas.norad }}'
                                 data-start='{{ pas.ts.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}'
-                                data-end='{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}'>
+                                data-end='{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}'
+                                data-moon='{{ pas.moon }}'>
                             View Plot
                         </button>
                     </td>
@@ -128,10 +129,64 @@
             const start = button.getAttribute('data-start');
             const end = button.getAttribute('data-end');
 
+            const moon = JSON.parse(button.getAttribute('data-moon')); // Позиція Місяця
+            const moon_az = moon[1];
+            const moon_el = 90 - moon[0]; // Перетворення висоти
+
             const markerColors = sunlit.map(isSunlit => isSunlit === 1 ? 'white' : '#ff0202');
             const rValues = elevations.map(elevation => 90 - elevation);
 
             const el = rValues.map(elevation => 90 - elevation);
+
+
+            // Дані для початкової точки
+            const startPoint = {
+                type: 'scatterpolar',
+                mode: 'text',
+                r: [rValues[0]], // Радіальна координата для початку
+                theta: [azimuths[0]], // Кутова координата для початку
+                text: ['b'], // Позначка 'b'
+                textposition: 'top center',
+                textfont: {
+                    color: 'white', // Білий колір тексту
+                    size: 12
+                },
+                showlegend: false
+            };
+
+            // Дані для кінцевої точки
+            const endPoint = {
+                type: 'scatterpolar',
+                mode: 'text',
+                r: [rValues[rValues.length - 1]], // Радіальна координата для кінця
+                theta: [azimuths[azimuths.length - 1]], // Кутова координата для кінця
+                text: ['e'], // Позначка 'e'
+                textposition: 'top center',
+                textfont: {
+                    color: 'white', // Білий колір тексту
+                    size: 12
+                },
+                showlegend: false
+            };
+
+             // Дані для позиції Місяця
+            const moonPoint = {
+                type: 'scatterpolar',
+                mode: 'markers+text',
+                r: [moon_el], // Радіальна координата Місяця
+                theta: [moon_az], // Кутова координата Місяця
+                text: ['Moon'], // Позначка "Moon"
+                textposition: 'top center',
+                textfont: {
+                    color: 'white',
+                    size: 12
+                },
+                marker: {
+                    color: '#FFD700', // Золотий колір для Місяця
+                    size: 12
+                },
+                showlegend: false
+            };
 
             const polarData = {
                 type: 'scatterpolar',
@@ -211,7 +266,7 @@
                 modeBarButtonsToRemove: ['toImage']
             };
 
-            Plotly.newPlot('skyplot', [polarData], layout, config);
+            Plotly.newPlot('skyplot', [polarData, startPoint, endPoint, moonPoint], layout, config);
         });
     });
 </script>
