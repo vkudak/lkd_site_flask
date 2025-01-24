@@ -463,9 +463,9 @@ class SatForView(db.Model):
     """ Class for sat view section. Not connected to other classes """
     __tablename__ = 'sat_for_view'
     id = db.Column(db.Integer, primary_key=True)
-    norad = db.Column(db.Integer, nullable=False)
-    cospar = db.Column(db.String(15), nullable=False)
-    name = db.Column(db.String(35), nullable=False)
+    norad = db.Column(db.Integer, nullable=False, unique=True)
+    cospar = db.Column(db.String(15), nullable=False, unique=True)
+    name = db.Column(db.String(35), nullable=False, default='')
     priority = db.Column(db.Integer, nullable=False, default=0)
     tle = db.Column(db.Text)
 
@@ -502,25 +502,31 @@ class SatForView(db.Model):
         return True
 
     def get_tle_epoch(self):
-        f = BytesIO(str.encode(self.tle))
-        ts = load.timescale()
-        sat = list(parse_tle_file(f, ts))
-        sat = sat[0]
-        return sat.epoch
+        if self.tle == '':
+            return 999
+        else:
+            f = BytesIO(str.encode(self.tle))
+            ts = load.timescale()
+            sat = list(parse_tle_file(f, ts))
+            sat = sat[0]
+            return sat.epoch
 
     def calc_passes(self, site, t1, t2, min_h=20):
         # if TLE are 3 days old then get new TLE
-        if self.tle is None or abs(self.get_tle_epoch() - t1) > 3:
+        if self.tle == '' or abs(self.get_tle_epoch() - t1) > 3:
             self.get_tle(t1)
 
+        print(self.norad)
+        print(self.tle)
         # Calc Passes
         ts = load.timescale()
         eph = load('de421.bsp')
         f = BytesIO(str.encode(self.tle))
         sat = list(parse_tle_file(f, ts))
         sat = sat[0]
-        if self.name == '':
+        if self.name == '' or self.cospar == '':
             self.name = sat.name
+            self.cospar = sat.model.intldesg
             db.session.commit()
         passes = []
 
@@ -528,35 +534,35 @@ class SatForView(db.Model):
         te = [[ti, event] for ti, event in zip(t, events)]
         # *0 — rise, 1 - culm, 3 - sets
 
-        # first event should be RISE
-        while te[0][1] != 0:
-            current_app.logger.warning(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
+        if te: # if there are some transits
+            # first event should be RISE
+            while te[0][1] != 0:
+                current_app.logger.warning(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
 
+            t, events = zip(*te)
 
-        t, events = zip(*te)
+            t_st = [ti for ti, event in zip(t, events) if event == 0]
+            t_end = [ti for ti, event in zip(t, events) if event == 2]
+            for tst, tend in zip(t_st, t_end):
+                times = ts.linspace(t0=tst, t1=tend, num=300)
+                # for t in times:
+                difference = sat - site
+                topocentric = difference.at(times)
+                alt, az, distance = topocentric.altaz()
+                sunlit = sat.at(times).is_sunlit(eph)
+                sunl = sunlit.tolist()
+                sunl = [int(z) for z in sunl]
 
-        t_st = [ti for ti, event in zip(t, events) if event == 0]
-        t_end = [ti for ti, event in zip(t, events) if event == 2]
-        for tst, tend in zip(t_st, t_end):
-            times = ts.linspace(t0=tst, t1=tend, num=300)
-            # for t in times:
-            difference = sat - site
-            topocentric = difference.at(times)
-            alt, az, distance = topocentric.altaz()
-            sunlit = sat.at(times).is_sunlit(eph)
-            sunl = sunlit.tolist()
-            sunl = [int(z) for z in sunl]
-
-            if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
-                pas = {'norad': sat.model.satnum,
-                       'name': sat.name,
-                       'priority': int(self.priority),
-                       'ts': tst,
-                       'te': tend,
-                       "alt": alt.degrees.tolist(),
-                       'az': az.degrees.tolist(),
-                       'distance': distance.km.tolist(),
-                       'sunlighted': sunl
-                       }
-                passes.append(pas)
+                if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
+                    pas = {'norad': sat.model.satnum,
+                           'name': sat.name,
+                           'priority': int(self.priority),
+                           'ts': tst,
+                           'te': tend,
+                           "alt": alt.degrees.tolist(),
+                           'az': az.degrees.tolist(),
+                           'distance': distance.km.tolist(),
+                           'sunlighted': sunl
+                           }
+                    passes.append(pas)
         return passes

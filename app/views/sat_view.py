@@ -102,7 +102,7 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
 
         return render_template('sat_pas/sat_view.html',
                                passes=passes,
-                               site_name=my_loc['name'],
+                               site=my_loc,
                                date_start=date_start
                                )
     else:

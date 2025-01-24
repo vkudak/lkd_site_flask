@@ -7,6 +7,16 @@ function confirmAction(){
 }
 </script>
 
+<script>
+    // Функція для вибору всіх чекбоксів
+    function toggleAllCheckboxes(selectAllCheckbox) {
+        const checkboxes = document.querySelectorAll('input[name="selected_satellites"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = selectAllCheckbox.checked;
+        });
+    }
+</script>
+
 {#<form method="POST" action="{{ url_for('sat_view.sat_passes') }}">#}
 <form method="POST" action="{{ url_for('sat_view.sat_passes') }}">
     {{ form.hidden_tag() }} <!-- CSRF-токен -->
@@ -40,7 +50,11 @@ function confirmAction(){
             <table id="satellites-table" class="display" style="width: 100%;">
                 <thead>
                     <tr style="line-height: 20px;">
-                        <th style="text-align:center;">Select</th>
+                        <th style="text-align:center;">
+                            <input type="checkbox" id="select-all" onclick="toggleAllCheckboxes(this)">
+                            Select
+                        </th>
+{#                        <th style="text-align:center;">Select</th>#}
                         <th style="text-align:center;">NORAD ID</th>
                         <th style="text-align:center;">COSPAR ID</th>
                         <th style="text-align:center;">Name</th>
@@ -112,7 +126,11 @@ function confirmAction(){
             {
                 scrollY: '400px', // Максимальна висота таблиці
                 scrollCollapse: true, // Дозволяє стискати таблицю, якщо рядків мало
-                paging: false // Вимикає пагінацію
+                paging: false, // Вимикає пагінацію
+                order: [
+                    [4, 'dsc'], // Сортування за колонкою Priority (індекс 4) за зростанням
+                    [1, 'asc'], // Date sort
+                ]
             }
         );
     });
