@@ -534,11 +534,6 @@ class SatForView(db.Model):
         te = [[ti, event] for ti, event in zip(t, events)]
         # *0 — rise, 1 - culm, 3 - sets
 
-        # Moon AltAz
-        m_site = earth + site
-        m_alt, m_az, _ = m_site.at(t1).observe(moon).apparent().altaz()
-        # print(m_az.degrees, m_alt.degrees)
-
         if te: # if there are some transits
             # first event should be RISE
             while te[0][1] != 0:
@@ -557,6 +552,10 @@ class SatForView(db.Model):
                 sunlit = sat.at(times).is_sunlit(eph)
                 sunl = sunlit.tolist()
                 sunl = [int(z) for z in sunl]
+
+                # Moon AltAz
+                m_site = earth + site
+                m_alt, m_az, _ = m_site.at(tst).observe(moon).apparent().altaz()
 
                 if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
                     pas = {'norad': sat.model.satnum,
