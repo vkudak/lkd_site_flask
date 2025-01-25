@@ -2,6 +2,7 @@ import os
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
+from skyfield import almanac
 from sqlalchemy import and_
 
 from datetime import datetime, timedelta, timezone, date
@@ -488,7 +489,7 @@ class SatForView(db.Model):
             password = os.getenv('ST_PASSWORD')
             st = SpaceTrackClient(username, password)
             # data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
-            data = st.tle(norad_cat_id=[self.norad], epoch=f'<={t_st}',  orderby='epoch desc', limit=1, format='3le')
+            data = st.tle(norad_cat_id=[self.norad], epoch=f'<{t_st}',  orderby='epoch desc', limit=1, format='3le')
             if data:
                 self.tle = data
                 db.session.commit()
@@ -521,6 +522,7 @@ class SatForView(db.Model):
         eph = load('de421.bsp')
         earth = eph['Earth']
         moon = eph['Moon']
+        sun = eph['Sun']
         f = BytesIO(str.encode(self.tle))
         sat = list(parse_tle_file(f, ts))
         sat = sat[0]
@@ -554,8 +556,14 @@ class SatForView(db.Model):
                 sunl = [int(z) for z in sunl]
 
                 # Moon AltAz
-                m_site = earth + site
-                m_alt, m_az, _ = m_site.at(tst).observe(moon).apparent().altaz()
+                # m_site = earth + site
+                # m_alt, m_az, _ = m_site.at(tst).observe(moon).apparent().altaz()
+
+                location_now = (earth + site).at(tst)
+                apparent = location_now.observe(moon).apparent()
+                m_alt, m_az, _ = apparent.altaz()
+                illumination = apparent.fraction_illuminated(sun) * 100
+                # print(illumination)
 
                 if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
                     pas = {'norad': sat.model.satnum,
@@ -567,7 +575,9 @@ class SatForView(db.Model):
                            'az': az.degrees.tolist(),
                            'distance': distance.km.tolist(),
                            'sunlighted': sunl,
-                           'moon':[m_alt.degrees, m_az.degrees]
+                           'moon':[m_alt.degrees, m_az.degrees],
+                           # 'moon': [55, 180],  # For TEST
+                           'moon_phase':illumination,
                            }
                     passes.append(pas)
         return passes

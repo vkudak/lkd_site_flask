@@ -91,6 +91,24 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
         # leave only selecter Satellites
         sats = [sat for sat in sats if str(sat.norad) in selected_sat]
 
+        # TODO: check tle epoch for selected satellites and grab TLE for all old (>3 days) & write TLE to DB
+        #       To make function calc faster
+        # old_tle = []
+        # for sat in sats:
+        #     if sat.tle == '':
+        #         old_tle.append(sat.norad)
+        #     else:
+        #         # check TLE epoch
+        #         f = BytesIO(str.encode(sat.tle))
+        #         ts = load.timescale()
+        #         m_sat = list(parse_tle_file(f, ts))
+        #         if m_sat:
+        #             m_sat_epoch = m_sat[0].epoch
+        #             if abs(m_sat_epoch - t0) > 3:
+        #                 old_tle.append(sat.norad)
+        # # get all old TLEs
+        # data = st.tle(norad_cat_id=old_tle, epoch=f'<={t0}', orderby='epoch desc', limit=1, format='3le')
+
         passes = []
         for sat in sats:
             sp = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
@@ -131,7 +149,7 @@ def sat_select():
 
         satellites = SatForView.query.all()
 
-        today = datetime.now().strftime('%Y-%m-%d')  # Сьогоднішня дата
+        today = datetime.now().strftime('%Y-%m-%d')  # Default date
         return render_template('sat_pas/sat_select.html',
                                form=form,
                                satellites=satellites,

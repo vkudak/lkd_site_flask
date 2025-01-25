@@ -38,7 +38,8 @@
                                 data-norad='{{ pas.norad }}'
                                 data-start='{{ pas.ts.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}'
                                 data-end='{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}'
-                                data-moon='{{ pas.moon }}'>
+                                data-moon='{{ pas.moon }}'
+                                data-phase='{{ pas.moon_phase }}'>
                             View Plot
                         </button>
                     </td>
@@ -132,6 +133,7 @@
             const moon = JSON.parse(button.getAttribute('data-moon')); // Позиція Місяця
             const moon_az = moon[1];
             const moon_el = 90 - moon[0]; // Перетворення висоти
+            const moon_phase = parseFloat(button.getAttribute('data-phase')).toFixed(1); // Фаза Місяця
 
             const markerColors = sunlit.map(isSunlit => isSunlit === 1 ? 'white' : '#ff0202');
             const rValues = elevations.map(elevation => 90 - elevation);
@@ -176,7 +178,12 @@
                 r: [moon_el], // Радіальна координата Місяця
                 theta: [moon_az], // Кутова координата Місяця
                 text: ['Moon'], // Позначка "Moon"
+                // moon caption delete
+                hoverinfo: 'theta+r',
+                hovertemplate: '<extra></extra>', // Кастомна підказка
+                {#customdata: rValues.map(r => 90 - r), // Обчислюємо 90 - r для кожної точки#}
                 textposition: 'top center',
+
                 textfont: {
                     color: 'white',
                     size: 12
@@ -224,10 +231,25 @@
                     b: 30  // Нижній відступ
                 },
                 annotations: [
+                    // Start Stop Title
                     {
-                        x: 0.0, // По центру графіка
+                        x: 0.0, // початок
                         y: -0.05, //-0.25, // Нижче графіка
                         text: `${start} - ${end}`,
+                        showarrow: false,
+                        font: {
+                            color: 'white',
+                            size: 14
+                        },
+                        xref: 'paper', // Прив'язка до графіка
+                        yref: 'paper'  // Прив'язка до графіка
+                    },
+
+                    //Moon title
+                    {
+                        x: 1.0, // кінець
+                        y: 1.0, //Верх графіка
+                        text: `Moon: ${moon_phase} % <br>Az:${moon_az.toFixed(2)} <br> El:${(90.0-moon_el).toFixed(2)}`,
                         showarrow: false,
                         font: {
                             color: 'white',
