@@ -679,3 +679,8 @@ samp {
 	border-radius: 3px;
 	cursor: pointer;"
 }
+
+/*Correction of Radial Plot grid color*/
+.polarsublayer.angular-line path {
+    stroke: green !important; /* Встановлення кольору зелений */
+}

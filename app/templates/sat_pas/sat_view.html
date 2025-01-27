@@ -9,13 +9,14 @@
             </caption>
             <thead>
                 <tr>
-                    <th style="text-align:center;">Sat_Name</th>
+                    <th style="text-align:center;">Name</th>
                     <th style="text-align:center;">NORAD</th>
-                    <th style="text-align:center;">T_Date</th>
-                    <th style="text-align:center;">T_start</th>
-                    <th style="text-align:center;">T_end</th>
-                    <th style="text-align:center;">Priority</th>
-                    <th style="text-align:center;">Action</th>
+                    <th style="text-align:center;" title="Date of RSO Pass">T_Date</th>
+                    <th style="text-align:center;" title="Time of RSO Pass Start">T_start</th>
+                    <th style="text-align:center;" title="Time of RSO Pass End">T_end</th>
+                    <th style="text-align:center;" title="Elevation in Culmination">H<sub>c</sub></th>
+                    <th style="text-align:center;" title="Priority">Pri</th>
+                    <th style="text-align:center;" title="Plot Pass">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -26,6 +27,7 @@
                     <td>{{ pas.ts.utc_datetime().strftime("%Y-%m-%d") }}</td>
                     <td>{{ pas.ts.utc_datetime().strftime("%H:%M:%S") }}</td>
                     <td>{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}</td>
+                    <td>{{ '%.2f' % (pas.alt | map('float') | max) }}</td>
                     <td>{{ pas.priority }}</td>
                     <td>
                         <button class="select-pass-btn"
@@ -39,7 +41,9 @@
                                 data-start='{{ pas.ts.utc_datetime().strftime("%Y-%m-%d %H:%M:%S") }}'
                                 data-end='{{ pas.te.utc_datetime().strftime("%H:%M:%S") }}'
                                 data-moon='{{ pas.moon }}'
-                                data-phase='{{ pas.moon_phase }}'>
+                                data-phase='{{ pas.moon_phase }}'
+                                data-sun_el="{{ pas.sun_alt }}"
+                        >
                             View Plot
                         </button>
                     </td>
@@ -59,9 +63,9 @@
     function createEmptyPlot() {
         const emptyData = {
             type: 'scatterpolar',
-            mode: 'lines+markers',
-            r: [], // Порожні дані
-            theta: [],
+            mode: 'markers',
+            r: [null], // Порожні дані
+            theta: [null],
             marker: {
                 color: 'white',
                 size: 3
@@ -91,6 +95,7 @@
                     direction: "clockwise",
                     rotation: 90,
                     gridcolor: 'white',
+                    showgrid: true,
                     tickcolor: 'white',
                     tickfont: { color: 'white' }
                 },
@@ -134,6 +139,8 @@
             const moon_az = moon[1];
             const moon_el = 90 - moon[0]; // Перетворення висоти
             const moon_phase = parseFloat(button.getAttribute('data-phase')).toFixed(1); // Фаза Місяця
+
+            const sun_el = parseFloat(button.getAttribute('data-sun_el')).toFixed(2);
 
             const markerColors = sunlit.map(isSunlit => isSunlit === 1 ? 'white' : '#ff0202');
             const rValues = elevations.map(elevation => 90 - elevation);
@@ -236,6 +243,20 @@
                         x: 0.0, // початок
                         y: -0.05, //-0.25, // Нижче графіка
                         text: `${start} - ${end}`,
+                        showarrow: false,
+                        font: {
+                            color: 'white',
+                            size: 14
+                        },
+                        xref: 'paper', // Прив'язка до графіка
+                        yref: 'paper'  // Прив'язка до графіка
+                    },
+
+                    //Sun title
+                    {
+                        x: 1.0, // кінець
+                        y: -0.05, //низ графіка
+                        text: `Sun alt:${sun_el}`,
                         showarrow: false,
                         font: {
                             color: 'white',

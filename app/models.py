@@ -537,47 +537,51 @@ class SatForView(db.Model):
         # *0 — rise, 1 - culm, 3 - sets
 
         if te: # if there are some transits
-            # first event should be RISE
-            while te[0][1] != 0:
+            # first event should be RISE (0)
+            while te and te[0][1] != 0:
                 current_app.logger.warning(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
 
-            t, events = zip(*te)
+            if te: # if transits is not empty after while cycle
+                t, events = zip(*te)
 
-            t_st = [ti for ti, event in zip(t, events) if event == 0]
-            t_end = [ti for ti, event in zip(t, events) if event == 2]
-            for tst, tend in zip(t_st, t_end):
-                times = ts.linspace(t0=tst, t1=tend, num=300)
-                # for t in times:
-                difference = sat - site
-                topocentric = difference.at(times)
-                alt, az, distance = topocentric.altaz()
-                sunlit = sat.at(times).is_sunlit(eph)
-                sunl = sunlit.tolist()
-                sunl = [int(z) for z in sunl]
+                t_st = [ti for ti, event in zip(t, events) if event == 0]
+                t_end = [ti for ti, event in zip(t, events) if event == 2]
+                for tst, tend in zip(t_st, t_end):
+                    times = ts.linspace(t0=tst, t1=tend, num=300)
+                    difference = sat - site
+                    topocentric = difference.at(times)
+                    alt, az, distance = topocentric.altaz()
+                    sunlit = sat.at(times).is_sunlit(eph)
+                    sunl = sunlit.tolist()
+                    sunl = [int(z) for z in sunl]
 
-                # Moon AltAz
-                # m_site = earth + site
-                # m_alt, m_az, _ = m_site.at(tst).observe(moon).apparent().altaz()
+                    # Moon AltAz
+                    # m_site = earth + site
+                    # m_alt, m_az, _ = m_site.at(tst).observe(moon).apparent().altaz()
 
-                location_now = (earth + site).at(tst)
-                apparent = location_now.observe(moon).apparent()
-                m_alt, m_az, _ = apparent.altaz()
-                illumination = apparent.fraction_illuminated(sun) * 100
-                # print(illumination)
+                    location_now = (earth + site).at(tst)
+                    apparent = location_now.observe(moon).apparent()
+                    m_alt, m_az, _ = apparent.altaz()
+                    illumination = apparent.fraction_illuminated(sun) * 100
+                    # print(illumination)
 
-                if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
-                    pas = {'norad': sat.model.satnum,
-                           'name': sat.name,
-                           'priority': int(self.priority),
-                           'ts': tst,
-                           'te': tend,
-                           "alt": alt.degrees.tolist(),
-                           'az': az.degrees.tolist(),
-                           'distance': distance.km.tolist(),
-                           'sunlighted': sunl,
-                           'moon':[m_alt.degrees, m_az.degrees],
-                           # 'moon': [55, 180],  # For TEST
-                           'moon_phase':illumination,
-                           }
-                    passes.append(pas)
+                    apparent_sun = location_now.observe(sun).apparent()
+                    sun_alt, _, _ = apparent_sun.altaz()
+
+                    if any(sunlit):  # if at least one point is at sunlight add RSO pass to list
+                        pas = {'norad': sat.model.satnum,
+                               'name': sat.name,
+                               'priority': int(self.priority),
+                               'ts': tst,
+                               'te': tend,
+                               "alt": alt.degrees.tolist(),
+                               'az': az.degrees.tolist(),
+                               'distance': distance.km.tolist(),
+                               'sunlighted': sunl,
+                               'moon':[m_alt.degrees, m_az.degrees],
+                               # 'moon': [55, 180],  # For TEST
+                               'moon_phase':illumination,
+                               'sun_alt': sun_alt.degrees
+                               }
+                        passes.append(pas)
         return passes
