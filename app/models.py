@@ -515,10 +515,11 @@ class SatForView(db.Model):
 
     def calc_passes(self, site, t1, t2, min_h=20):
         # if TLE are 3 days old then get new TLE
-        if self.tle == '' or abs(self.get_tle_epoch() - t1) > 3:
+        message = None
+        if self.tle is None or self.tle =='' or abs(self.get_tle_epoch() - t1) > 3:
             if not self.get_tle(t1):
-                # TODO: if get_tle return FALSE - skip Satellite with message
-                return []
+                message = f"Error: Cant get TLE for RSO NORAD:{self.norad}"
+                return [], message
         # print(self.tle)
         # print(self.get_tle_epoch() - t1)
 
@@ -589,4 +590,4 @@ class SatForView(db.Model):
                                'sun_alt': sun_alt.degrees
                                }
                         passes.append(pas)
-        return passes
+        return passes, message

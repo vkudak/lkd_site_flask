@@ -73,7 +73,10 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
         location_id = request.form.get('location')
         date_start = request.form.get('observation_date')
         min_sat_h = request.form.get('elevation')
+        min_sun_h = request.form.get('sun_h')
         selected_sat = request.form.getlist('selected_satellites')
+
+        # print(request.form)
 
         my_loc = [loc[1] for loc in loc_res if loc[0] == int(location_id)]
         if my_loc:
@@ -85,10 +88,10 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
 
         # site = wgs84.latlon(48.5635505, 22.453751, 231)
         # site = wgs84.latlon(my_loc['lat'], my_loc['lon'], my_loc['elev'])
-        t0, t1 = calc_t_twilight(site, date_start)
+        t0, t1 = calc_t_twilight(site, date_start, h_sun=int(min_sun_h))
 
         sats = SatForView.get_all()
-        # leave only selecter Satellites
+        # leave only selected Satellites
         sats = [sat for sat in sats if str(sat.norad) in selected_sat]
 
         # TODO: check tle epoch for selected satellites and grab TLE for all old (>3 days) & write TLE to DB
@@ -111,7 +114,9 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
 
         passes = []
         for sat in sats:
-            sp = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
+            sp, mes = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
+            if mes:
+                flash(mes)
             passes.extend(sp)
 
         # # sorting
@@ -195,5 +200,6 @@ def add_satellite():
 class SatelliteTrackingForm(FlaskForm):
     observation_date = DateField('Observation Date', format='%Y-%m-%d', validators=[DataRequired()])
     elevation = IntegerField('Minimum Elevation (degrees)', validators=[DataRequired()])
+    sun_h = IntegerField('Minimum Sun Elevation (degrees)', validators=[DataRequired()])
     location = SelectField('Observation Location', coerce=int, validators=[DataRequired()])
     submit = SubmitField('Submit')
