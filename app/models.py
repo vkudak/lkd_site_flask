@@ -503,8 +503,9 @@ class SatForView(db.Model):
         return True
 
     def get_tle_epoch(self):
-        if self.tle == '':
-            return 999
+        if self.tle == '' or self.tle is None:
+            ts = load.timescale()
+            return ts.tt(2000, 1, 1, 12, 0)
         else:
             f = BytesIO(str.encode(self.tle))
             ts = load.timescale()
@@ -515,7 +516,11 @@ class SatForView(db.Model):
     def calc_passes(self, site, t1, t2, min_h=20):
         # if TLE are 3 days old then get new TLE
         if self.tle == '' or abs(self.get_tle_epoch() - t1) > 3:
-            self.get_tle(t1)
+            if not self.get_tle(t1):
+                # TODO: if get_tle return FALSE - skip Satellite with message
+                return []
+        # print(self.tle)
+        # print(self.get_tle_epoch() - t1)
 
         # Calc Passes
         ts = load.timescale()
