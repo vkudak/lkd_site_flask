@@ -13,12 +13,12 @@ class Config:
     TEMPLATES_FOLDER = 'templates'
 
     # https://stackoverflow.com/questions/58866560/flask-sqlalchemy-pool-pre-ping-only-working-sometimes
-    SQLALCHEMY_POOL_RECYCLE = 20  # 35  # value less than backend’s timeout
-    SQLALCHEMY_POOL_TIMEOUT = 7  # value less than backend’s timeout
+    # SQLALCHEMY_POOL_RECYCLE = 20  # 35  # value less than backend’s timeout
+    # SQLALCHEMY_POOL_TIMEOUT = 7  # value less than backend’s timeout
     SQLALCHEMY_PRE_PING = True
     SQLALCHEMY_ENGINE_OPTIONS = {'pool_size': 10,
-                                 'pool_recycle': SQLALCHEMY_POOL_RECYCLE,
-                                 'pool_timeout': SQLALCHEMY_POOL_TIMEOUT,
+                                 'pool_recycle': 20,
+                                 'pool_timeout': 7,
                                  'pool_pre_ping': SQLALCHEMY_PRE_PING}
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -50,3 +50,11 @@ class DevConfig(Config):
     DEBUG = True
     TESTING = True
     DATABASE_URI = "sqlite:///dev.db"
+
+
+class TestConfig:
+    DEBUG = False
+    TESTING = True  # Увімкнено тестовий режим
+    SECRET_KEY = environ.get('SECRET_KEY')
+    DATABASE_URI = "sqlite:///test.db"  # Окрема тестова база
+    SQLALCHEMY_TRACK_MODIFICATIONS = False # Warning if skip this option
