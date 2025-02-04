@@ -58,3 +58,6 @@ class TestConfig:
     SECRET_KEY = environ.get('SECRET_KEY')
     DATABASE_URI = "sqlite:///test.db"  # Окрема тестова база
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Warning if skip this option
+    WTF_CSRF_ENABLED = False
+    SESSION_TYPE = 'filesystem'  # Використовуємо файлову систему для збереження сесій
+    SESSION_PERMANENT = False  # Опційно: робимо сесію непостійною

@@ -17,6 +17,7 @@ def app():
         "TESTING": True,
         'SQLALCHEMY_TRACK_MODIFICATIONS':False,
     })
+    # app.config['WTF_CSRF_METHODS'] = []  # This is the magic
     # Створення бази та таблиць
     with app.app_context():
         db.create_all()

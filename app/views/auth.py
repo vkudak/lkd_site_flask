@@ -72,10 +72,10 @@ def login():
                 return redirect(redirect_url)
             else:
                 current_app.logger.info('User <%s> wrong password', user.username)
-                flash("invalid password")
+                flash("Invalid password")
         else:
-            current_app.logger.info('User <%s> NOT found in DB', user.username)
-
+            current_app.logger.info('User <%s> NOT found in DB', form.username.data)
+            flash("Invalid username")
     if request.method == "POST":
         current_app.logger.warning('FORM not valid')
         current_app.logger.warning("FORM_data = %s", request.form)
@@ -107,6 +107,7 @@ def register():
                         site_elev=form.site_elev.data)
         db.session.add(new_user)
         db.session.commit()
+        flash("Registration successful! Please log in.")
         return redirect(url_for("auth.login"))
 
     return render_template("register.html", form=form)

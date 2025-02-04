@@ -4,7 +4,7 @@
             <h2 id="text_log"> Log In </h2>
             <form method="Post" action="" id="logf">
             {{ form.hidden_tag() }}
-            {{ form.csrf_token() }}
+{#            {{ form.csrf_token() }}#}
             {{ form.username }}<br>
             {{ form.password }}<br>
             {{ form.submit }}
@@ -17,14 +17,14 @@
             {% endif %}
         </div>
 
-    {% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li style="color:red">{{ message }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-    {% endwith %}
+{#    {% with messages = get_flashed_messages() %}#}
+{#        {% if messages %}#}
+{#        <ul>#}
+{#            {% for message in messages %}#}
+{#            <li style="color:red">{{ message }}</li>#}
+{#            {% endfor %}#}
+{#        </ul>#}
+{#        {% endif %}#}
+{#    {% endwith %}#}
 
     {% endblock %}
