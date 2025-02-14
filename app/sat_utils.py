@@ -4,6 +4,7 @@ import shutil
 import numpy as np
 from datetime import datetime, timedelta
 import time
+import traceback
 
 from bokeh.colors.groups import black
 from bokeh.layouts import gridplot
@@ -334,6 +335,7 @@ def process_lc_file(file, file_ext, db, app):
                     # print(e.__class__.__name__)
                     # print("Error = ", e, e.__class__.__name__)
                     # print("Bed format PHR in file")
+                    app.logger.error(f"Full Error with Traceback:\n{traceback.format_exc()}")
 
                     # If error occurs there is a chance that we have satellite without LCs
                     # This will delete such records
@@ -873,7 +875,13 @@ def detect_period(date_time, mag, detrend=False):
         mag = remove_trend(mag, order=3)
     if len(mag) < 100:
         return -1
-    d = {'date': date_time, 'value': mag * -1}
+
+    # for very long LCs - make it shorter. Otherwise, it takes to long to process
+    if len(mag) > 2000:
+        d = {'date': date_time[:2000], 'value': mag[:2000] * -1}
+    else:
+        d = {'date': date_time, 'value': mag * -1}
+
     df = pd.DataFrame(data=d)
 
     res = find_period(df,
@@ -885,6 +893,7 @@ def detect_period(date_time, mag, detrend=False):
                       consider_only_significant_correlation=False,
                       level_of_significance_for_pearson=1e-7,
                       )
+    # print(res[0]*60, res[-1] > 0.3)
     if res[-1] > 0.3:
         return res[0]*60
     else:
