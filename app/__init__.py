@@ -31,73 +31,74 @@ def create_app():
     # CONFIG_TYPE = os.getenv('CONFIG_TYPE', default='app.config.DevConfig')
     
     # https://realpython.com/flask-by-example-part-1-project-setup/#running-the-python-flask-example-locally
-    
-    app.config.from_object(
-        os.getenv('CONFIG_TYPE', default='app.config.DevConfig')
-    )
-    # print("sec_key =", app.config['SECRET_KEY'])
-    # print("conf_type =", os.getenv('CONFIG_TYPE'))
 
-    uri = app.config["DATABASE_URI"]
-    if uri and uri.startswith("postgres://"):
-        uri = uri.replace("postgres://", "postgresql://", 1)
+    with app.app_context():
+        app.config.from_object(
+            os.getenv('CONFIG_TYPE', default='app.config.DevConfig')
+        )
+        # print("sec_key =", app.config['SECRET_KEY'])
+        # print("conf_type =", os.getenv('CONFIG_TYPE'))
 
-    app.config.update(
-        SQLALCHEMY_DATABASE_URI=uri  # app.config["DATABASE_URI"]
-    )
-    # app.config['UPLOAD_FOLDER'] = "upload/lcs"
-    app.config['MAX_CONTENT_PATH'] = 5 * 1024 * 1024  # 5 Mb
-    app.config['UPLOAD_EXTENSIONS'] = ['.phc', '.ph']
-    app.config['multi_lc_state'] = False
+        uri = app.config["DATABASE_URI"]
+        if uri and uri.startswith("postgres://"):
+            uri = uri.replace("postgres://", "postgresql://", 1)
 
-    # print(os.getenv('CONFIG_TYPE', default='app.config.DevConfig'))
-    # print(app.config['DATABASE_URI'])
-    # print(app.config['SECRET_KEY'])
+        app.config.update(
+            SQLALCHEMY_DATABASE_URI=uri  # app.config["DATABASE_URI"]
+        )
+        # app.config['UPLOAD_FOLDER'] = "upload/lcs"
+        app.config['MAX_CONTENT_PATH'] = 5 * 1024 * 1024  # 5 Mb
+        app.config['UPLOAD_EXTENSIONS'] = ['.phc', '.ph']
+        app.config['multi_lc_state'] = False
 
-    bcrypt.init_app(app)
-    from app.models import db
-    db.init_app(app)
-    migrate.init_app(app, db)
-    setup_database(app, db)
-    # https://flask-migrate.readthedocs.io/en/latest/
+        # print(os.getenv('CONFIG_TYPE', default='app.config.DevConfig'))
+        # print(app.config['DATABASE_URI'])
+        # print(app.config['SECRET_KEY'])
 
-    login_manager.init_app(app)
-    login_manager.session_protection = "strong"
-    from app.models import User
+        bcrypt.init_app(app)
+        from app.models import db
+        db.init_app(app)
+        migrate.init_app(app, db)
+        setup_database(app, db)
+        # https://flask-migrate.readthedocs.io/en/latest/
 
-    @login_manager.user_loader
-    def load_user(user_id):
-        # return User.query.get(int(user_id))
-        user = User.query.get(int(user_id))
-        # user = User.query.filter_by(id=int(user_id)).first()
-        if user:
-            # print(user.username)
-            app.logger.info("Load User with username <%s>", user.username)
-        return user
+        login_manager.init_app(app)
+        login_manager.session_protection = "strong"
+        from app.models import User
 
-    # csrf.init_app(app)
+        @login_manager.user_loader
+        def load_user(user_id):
+            # return User.query.get(int(user_id))
+            user = User.query.get(int(user_id))
+            # user = User.query.filter_by(id=int(user_id)).first()
+            if user:
+                # print(user.username)
+                app.logger.info("Load User with username <%s>", user.username)
+            return user
 
-    from .views import auth_bp, home_bp, eb_bp, sat_bp, sat_view_bp
-    app.register_blueprint(home_bp)
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(eb_bp)
-    app.register_blueprint(sat_bp)
-    app.register_blueprint(sat_view_bp)
+        # csrf.init_app(app)
 
-    login_manager.login_view = "auth.login"
-    app.app_context().push()
+        from .views import auth_bp, home_bp, eb_bp, sat_bp, sat_view_bp
+        app.register_blueprint(home_bp)
+        app.register_blueprint(auth_bp)
+        app.register_blueprint(eb_bp)
+        app.register_blueprint(sat_bp)
+        app.register_blueprint(sat_view_bp)
 
-    Session(app)
-    csrf.init_app(app)
-    cors.init_app(app)
-    cache.init_app(app,
-                   config={
-                       #'CACHE_TYPE': 'SimpleCache',
-                       'CACHE_TYPE': 'FileSystemCache',
-                       'CACHE_DIR': 'cache',
-                       "CACHE_THRESHOLD": 300
-                           }
-                   )
+        login_manager.login_view = "auth.login"
+        # app.app_context().push()
+
+        Session(app)
+        csrf.init_app(app)
+        cors.init_app(app)
+        cache.init_app(app,
+                       config={
+                           #'CACHE_TYPE': 'SimpleCache',
+                           'CACHE_TYPE': 'FileSystemCache',
+                           'CACHE_DIR': 'cache',
+                           "CACHE_THRESHOLD": 300
+                               }
+                       )
 
     # https://trstringer.com/logging-flask-gunicorn-the-manageable-way/
     import logging
@@ -109,5 +110,11 @@ def create_app():
     # gunicorn_logger = logging.getLogger('gunicorn.error')
     # app.logger.handlers = gunicorn_logger.handlers
     # app.logger.setLevel(gunicorn_logger.level)
+
+
+    # Possible CSRF token error with gunicorn(w>1), solution:
+    # https://medium.com/@sagar.pndt305/how-to-fix-the-csrf-token-issue-when-using-gunicorn-with-flask-66f04fc1a9b9
+    # or
+    # https://stackoverflow.com/questions/54027777/flask-wtf-csrf-session-token-missing-secret-key-not-found/64148808#64148808
 
     return app
