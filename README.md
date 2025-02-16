@@ -1,6 +1,8 @@
+![PyTest](coverage.svg)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-raw/vkudak/lkd_site_flask)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/vkudak/lkd_site_flask)
 ![GitHub Release](https://img.shields.io/github/release/vkudak/lkd_site_flask)
+
 
 ### Powered by:
 ![Python](https://img.shields.io/badge/python-3670A0?style=flat-square&logo=python&logoColor=ffdd54)
@@ -12,7 +14,8 @@
 ![Nginx](https://img.shields.io/badge/nginx-%23009639.svg?style=flat-square&logo=nginx&logoColor=white)
 
 
-# LKD Site
+LKD Site
+==================
 
 ## Include:
  - **LKD overview**
@@ -24,18 +27,27 @@
  - **etc...**
 
 
-## Install
-**Use `venv` and**
+Installation
+------------
+**Use `venv`**  
+Run:  
+`pip install -r requirements.txt`  
+`gunicorn -c gunicorn_myconf.py --workers 1 --threads 3 run:app --log-level=debug --reload`  
+or simply  
+`gunicorn -c gunicorn_myconf.py run:app`
 
-`$ pip install -r requirements.txt`
-
-`$ gunicorn -c gunicorn_myconf.py --workers 1 --threads 3 run:app --log-level=debug --reload`
-
-**OR**
-
-Use instruction from DigitalOcean website -
-[Flask + Gunicorn + NGINX](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-22-04#step-5-configuring-nginx-to-proxy-requests)
-
-Useful:
+For server - write your own gunicorn_conf.py and  make a Service according to instruction from DigitalOcean website  
+Server Tips:
+[Flask + Gunicorn + NGINX](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-gunicorn-and-nginx-on-ubuntu-22-04#step-5-configuring-nginx-to-proxy-requests)  
+Journal Tips:
 [Journalctl to View and Manipulate Systemd Logs](https://www.digitalocean.com/community/tutorials/how-to-use-journalctl-to-view-and-manipulate-systemd-logs)
 
+
+Test Coverage
+------------
+`pip install coverage-badge`  
+`coverage run -m pytest`  
+Generate Badge icon:  
+`coverage-badge -o coverage.svg -f`  
+Show Coverage Report:  
+`coverage report -m`

@@ -22,6 +22,9 @@ def app():
     with app.app_context():
         db.create_all()
 
+    # push app context !!!!
+    app.app_context().push()
+
     # with app.app_context():
     #     # Очищуємо певні таблиці (наприклад, User, Post)
     #     db.session.execute("DELETE FROM user")  # або db.session.query(User).delete()
