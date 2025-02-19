@@ -91,11 +91,13 @@ def sat_phot():
                         if process_res:
                             current_app.logger.info(f'File {file.filename} successfully processed')
                         else:
-                            current_app.logger.warning(f"""File {file.filename} processed with error
-                            \nSkipping this file....""")
+                            current_app.logger.warning(f"""File {file.filename} processed with error. 
+                            Skipping this file....""")
+                            flash(f"File {file.filename} processed with error", 'error')
                     else:
-                        current_app.logger.warning(f'''wrong file ext in {file.filename}.
-                                                   \nSkipping this file....''')
+                        current_app.logger.warning(f'''Wrong file ext in {file.filename}.
+                                                   Skipping this file....''')
+                        flash(f"Wrong file ext in {file.filename}", 'info')
                 cache.clear()
                 return redirect(url_for("sat.sat_phot"))
 
