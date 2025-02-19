@@ -1,4 +1,5 @@
 import os
+import time
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
@@ -22,6 +23,12 @@ from io import BytesIO
 
 
 db = SQLAlchemy()
+
+
+def space_track_callback(until):
+    duration = int(round(until - time.monotonic()))
+    # print('Sleeping for {:d} seconds.'.format(duration))
+    current_app.logger.info('Sleeping for {:d} seconds.'.format(duration))
 
 
 class User(db.Model, UserMixin):
@@ -488,12 +495,16 @@ class SatForView(db.Model):
             username = os.getenv('ST_USERNAME')
             password = os.getenv('ST_PASSWORD')
             st = SpaceTrackClient(username, password)
+            st.callback = space_track_callback
             # data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
+            current_app.logger.info(f"Retrieving TLE for object {self.norad}")
             data = st.tle(norad_cat_id=[self.norad], epoch=f'<{t_st}',  orderby='epoch desc', limit=1, format='3le')
             if data:
                 self.tle = data
                 db.session.commit()
+                current_app.logger.info(f"TLE updated")
             else:
+                current_app.logger.warning(f"TLE not found, something wrong")
                 return False
 
         except Exception as e:
@@ -540,12 +551,15 @@ class SatForView(db.Model):
 
         t, events = sat.find_events(site, t1, t2, altitude_degrees=min_h)
         te = [[ti, event] for ti, event in zip(t, events)]
-        # *0 — rise, 1 - culm, 3 - sets
+        # *0 — rise, 1 - culm, 2 - sets
+        events_names = ['RISE', 'CULM', 'SET']
 
         if te: # if there are some transits
             # first event should be RISE (0)
             while te and te[0][1] != 0:
-                current_app.logger.warning(f"Deleting event {te.pop(0)} for satellite {sat.model.satnum}")
+                poped = te.pop(0)
+                current_app.logger.warning(f"Deleting event '{events_names[poped[1]]}'" +
+                                           f" at {poped[0].utc_strftime()} for satellite {sat.model.satnum}")
 
             if te: # if transits is not empty after while cycle
                 t, events = zip(*te)
