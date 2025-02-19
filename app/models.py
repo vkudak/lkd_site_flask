@@ -1,5 +1,4 @@
 import os
-import time
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
@@ -23,12 +22,6 @@ from io import BytesIO
 
 
 db = SQLAlchemy()
-
-
-def space_track_callback(until):
-    duration = int(round(until - time.monotonic()))
-    # print('Sleeping for {:d} seconds.'.format(duration))
-    current_app.logger.info('Sleeping for {:d} seconds.'.format(duration))
 
 
 class User(db.Model, UserMixin):
@@ -485,33 +478,42 @@ class SatForView(db.Model):
         sats = db.session.query(cls).order_by(cls.id).all()
         return sats
 
-    def get_tle(self, t=None):
-        if t is None:
-            t_st = 'now'
-        else:
-            t_st = t.utc_datetime().strftime("%Y-%m-%d")
+    @classmethod
+    def get_by_norad(cls, nor):
+        """
+        Get Sat for View by id
+        """
+        sat = db.session.query(cls).filter_by(norad=nor).first()
+        return sat
 
-        try:
-            username = os.getenv('ST_USERNAME')
-            password = os.getenv('ST_PASSWORD')
-            st = SpaceTrackClient(username, password)
-            st.callback = space_track_callback
-            # data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
-            current_app.logger.info(f"Retrieving TLE for object {self.norad}")
-            data = st.tle(norad_cat_id=[self.norad], epoch=f'<{t_st}',  orderby='epoch desc', limit=1, format='3le')
-            if data:
-                self.tle = data
-                db.session.commit()
-                current_app.logger.info(f"TLE updated")
-            else:
-                current_app.logger.warning(f"TLE not found, something wrong")
-                return False
-
-        except Exception as e:
-            current_app.logger.error(f" {e}, {e.args}\nCant read SpaceTrack username and password")
-            return False
-
-        return True
+    # DEPRECATED
+    # def get_tle(self, t=None):
+    #     if t is None:
+    #         t_st = 'now'
+    #     else:
+    #         t_st = t.utc_datetime().strftime("%Y-%m-%d")
+    #
+    #     try:
+    #         username = os.getenv('ST_USERNAME')
+    #         password = os.getenv('ST_PASSWORD')
+    #         st = SpaceTrackClient(username, password)
+    #         st.callback = space_track_callback
+    #         # data = st.tle_latest(norad_cat_id=[self.norad], ordinal=1, epoch='>now-30', format='3le')
+    #         current_app.logger.info(f"Retrieving TLE for object {self.norad}")
+    #         data = st.tle(norad_cat_id=[self.norad], epoch=f'<{t_st}',  orderby='epoch desc', limit=1, format='3le')
+    #         if data:
+    #             self.tle = data
+    #             db.session.commit()
+    #             current_app.logger.info(f"TLE updated")
+    #         else:
+    #             current_app.logger.warning(f"TLE not found, something wrong")
+    #             return False
+    #
+    #     except Exception as e:
+    #         current_app.logger.error(f" {e}, {e.args}\nCant read SpaceTrack username and password")
+    #         return False
+    #
+    #     return True
 
     def get_tle_epoch(self):
         if self.tle == '' or self.tle is None:
@@ -527,10 +529,11 @@ class SatForView(db.Model):
     def calc_passes(self, site, t1, t2, min_h=20):
         # if TLE are 3 days old then get new TLE
         message = None
-        if self.tle is None or self.tle =='' or abs(self.get_tle_epoch() - t1) > 3:
-            if not self.get_tle(t1):
-                message = f"Error: Cant get TLE for RSO NORAD:{self.norad}"
-                return [], message
+        # DEPRECATED
+        # if self.tle is None or self.tle =='' or abs(self.get_tle_epoch() - t1) > 3:
+        #     if not self.get_tle(t1):
+        #         message = f"Error: Cant get TLE for RSO NORAD:{self.norad}"
+        #         return [], message
         # print(self.tle)
         # print(self.get_tle_epoch() - t1)
 

@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from operator import itemgetter
 
 import numpy as np
@@ -61,6 +62,42 @@ def calc_t_twilight(site, date=None, h_sun=-12):
     return t_set[0], t_rise[1]
 
 
+def space_track_callback(until):
+    duration = int(round(until - time.monotonic()))
+    current_app.logger.info('Sleeping for {:d} seconds.'.format(duration))
+
+
+def update_tle(old_tle, t2):
+    try:
+        username = os.getenv('ST_USERNAME')
+        password = os.getenv('ST_PASSWORD')
+        st = SpaceTrackClient(username, password)
+        st.callback = space_track_callback
+        t1 = t2 - timedelta(days=5)
+        current_app.logger.info(f"Retrieving TLE for objects {old_tle}")
+        t1s = t1.utc_strftime("%Y-%m-%d")
+        t2s = t2.utc_strftime("%Y-%m-%d")
+        data = st.tle(norad_cat_id=[old_tle], epoch=f'{t1s}--{t2s}', orderby='epoch desc') # JSON
+
+        for sat in old_tle:
+            current_app.logger.info(f"Search TLE for object {sat}")
+            tles = [tl for tl in data if tl['NORAD_CAT_ID']==str(sat)]
+            if len(tles) > 1:
+                new_list = sorted(tles, key=lambda d: d['EPOCH'], reverse=True)
+                sc = SatForView.get_by_norad(int(sat))
+                sc.tle = new_list[0]['TLE_LINE0'] + '\n' + new_list[0]['TLE_LINE1'] + '\n' + new_list[0]['TLE_LINE2']
+                db.session.commit()
+                current_app.logger.info(f"TLE for object {sat} updated, TLE epoch {new_list[0]['EPOCH']}")
+            else:
+                current_app.logger.info(f"No TLE for object {sat}. Keeping old TLE.")
+        return True
+
+    except Exception as e:
+        current_app.logger.error(f"Cant read TLE from SpaceTrack")
+        current_app.logger.error(f" {e}, {e.args}")
+        return False
+
+
 @sat_view_bp.route('/sat_pas/sat_view.html', methods=["POST", "GET"])
 def sat_passes(): #site, date_start, sat_selected, min_sat_h):
     """
@@ -94,40 +131,43 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
         # leave only selected Satellites
         sats = [sat for sat in sats if str(sat.norad) in selected_sat]
 
+
         # TODO: check tle epoch for selected satellites and grab TLE for all old (>3 days) & write TLE to DB
         #       To make function calc faster
-        # old_tle = []
-        # for sat in sats:
-        #     if sat.tle == '':
-        #         old_tle.append(sat.norad)
-        #     else:
-        #         # check TLE epoch
-        #         f = BytesIO(str.encode(sat.tle))
-        #         ts = load.timescale()
-        #         m_sat = list(parse_tle_file(f, ts))
-        #         if m_sat:
-        #             m_sat_epoch = m_sat[0].epoch
-        #             if abs(m_sat_epoch - t0) > 3:
-        #                 old_tle.append(sat.norad)
-        # # get all old TLEs
-        # data = st.tle(norad_cat_id=old_tle, epoch=f'<={t0}', orderby='epoch desc', limit=1, format='3le')
-
-        passes = []
+        old_tle = []
         for sat in sats:
-            sp, mes = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
-            if mes:
-                flash(mes)
-            passes.extend(sp)
+            if sat.tle == '' or sat.tle is None:
+                old_tle.append(sat.norad)
+            else:
+                # check TLE epoch
+                f = BytesIO(str.encode(sat.tle))
+                ts = load.timescale()
+                m_sat = list(parse_tle_file(f, ts))
+                if m_sat:
+                    m_sat_epoch = m_sat[0].epoch
+                    if abs(m_sat_epoch - t0) > 3:
+                        old_tle.append(sat.norad)
 
-        # # sorting
-        # # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
-        # passes = sorted(passes, key=lambda k: (k['priority'], -k['ts'].tdb ), reverse=True)
+        # Update all old TLEs
+        if update_tle(old_tle, t0):
+            passes = []
+            for sat in sats:
+                sp, mes = sat.calc_passes(site, t0, t1, min_h=int(min_sat_h))
+                if mes:
+                    flash(mes)
+                passes.extend(sp)
 
-        return render_template('sat_pas/sat_view.html',
-                               passes=passes,
-                               site=my_loc,
-                               date_start=date_start
-                               )
+            # # sorting
+            # # https://stackoverflow.com/questions/62380562/sort-list-of-dicts-by-two-keys
+            # passes = sorted(passes, key=lambda k: (k['priority'], -k['ts'].tdb ), reverse=True)
+
+            return render_template('sat_pas/sat_view.html',
+                                   passes=passes,
+                                   site=my_loc,
+                                   date_start=date_start)
+        else:
+            flash('Error in TLE download. See logs for more details.')
+            return redirect(url_for('sat_view.sat_select'))
     else:
         # return render_template_string('PageNotFound {{ errorCode }}', errorCode='404'), 404
         return render_template_string('This entry goes not suppose to have respond for GET request'), 404
