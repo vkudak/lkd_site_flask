@@ -106,15 +106,15 @@
 {% endfor %}
 {% endif %}
 
-{% with messages = get_flashed_messages() %}
-    {% if messages %}
-    <ul>
-        {% for message in messages %}
-        <li style="color:red">{{ message|safe }}</li>
-        {% endfor %}
-    </ul>
-    {% endif %}
-{% endwith %}
+{#{% with messages = get_flashed_messages() %}#}
+{#    {% if messages %}#}
+{#    <ul>#}
+{#        {% for message in messages %}#}
+{#        <li style="color:red">{{ message|safe }}</li>#}
+{#        {% endfor %}#}
+{#    </ul>#}
+{#    {% endif %}#}
+{#{% endwith %}#}
 
 
 <script>
