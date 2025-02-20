@@ -104,3 +104,7 @@ def test_phx_lc_upload(client, caplog, auth):
     st_time = datetime.strptime('2025-01-30 17:36:50.807771', '%Y-%m-%d %H:%M:%S.%f')
     lc1 = Lightcurve.query.filter_by(ut_start=st_time).first()
     assert lc1 is not None
+
+# TODO: Test invalid LC file. Catch
+# log -> File {file.filename} processed with error. Skipping this file...."
+# log -> 'Wrong file ext in'
