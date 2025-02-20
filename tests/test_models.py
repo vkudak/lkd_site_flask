@@ -28,6 +28,17 @@ def test_delete_user(app):
 
 # def test_user_validation(app):
 #     user = User(username="", password="invalid-password", site_name="site", site_lat=48, site_lon=22, site_elev=180)
-#     with pytest.raises(ValueError):
-#         db.session.add(user)
-#         db.session.commit()
+#     from _pytest.outcomes import Failed
+#     try:
+#         with pytest.raises(ValueError):
+#             db.session.add(user)
+#             db.session.commit()
+#     except Failed as exc:
+#         # suppress
+#         pass
+#         # or
+#         # do something else with the exception
+#         print(exc)
+#         # or
+#         # raise SomeOtherException
+

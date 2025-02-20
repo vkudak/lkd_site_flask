@@ -67,7 +67,7 @@
             {% if user.is_admin %}
                 <form method="Post" action="" enctype="multipart/form-data">
                     {{ lc_form.hidden_tag() }}
-                    {{ lc_form.csrf_token() }}
+{#                    {{ lc_form.csrf_token() }}#}
                     <p style="line-height:10px; display: inline-block;"> File(s) </p>
                     {{ lc_form.lc_file }} <br>
 
@@ -83,7 +83,7 @@
             <summary>Create Report</summary>
               <form method="post" action="{{ url_for('sat.sat_phot')}}">
                 {{ report_form.hidden_tag() }}
-                {{ report_form.csrf_token() }}
+{#                {{ report_form.csrf_token() }}#}
 
                 {{ report_form.d_from.label}}
                 {{ report_form.d_from(style="width:30%;")}}<br>

@@ -76,8 +76,10 @@ def sat_phot():
                                    report_form=report_form,
                                    user=current_user)
         else:  # POST
+            current_app.logger.info(f'POST request in sat_phot()...')
             if lc_form.validate_on_submit() and lc_form.add.data:
                 # print(lc_form.lc_file.data, end="  ")
+                current_app.logger.info(f'Form Valid. Checking files in {lc_form.lc_file.data}')
                 for file in lc_form.lc_file.data:
                     file_ext = os.path.splitext(file.filename)
                     file_ext = file_ext[1]

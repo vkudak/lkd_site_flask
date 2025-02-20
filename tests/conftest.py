@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__) + "/.."))
 from app import create_app
-from app.models import db
+from app.models import db, User
 
 os.environ["MPLBACKEND"] = "Agg"  # Вимикає графічний інтерфейс
 
@@ -42,3 +42,19 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture
+def auth(client):
+    class AuthActions:
+        def login(self, username="testuser", password="password123"):
+            return client.post(
+                "/login",
+                data={"username": username, "password": password},
+                follow_redirects=True
+            )
+
+        def logout(self):
+            return client.get("/logout", follow_redirects=True)
+
+    return AuthActions()
