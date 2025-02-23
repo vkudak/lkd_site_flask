@@ -70,20 +70,30 @@ jobs:
         run: |
           GIST_ID="cd865320b628af7303721348b27ce3f0"  # Ваш ID Gist
           GITHUB_TOKEN=${{ secrets.GIST_TOKEN }}
-
+      
+          # Зчитуємо вміст файлів як валідний JSON рядок
+          TEST_CONTENT=$(jq -Rs . < test_status.json)
+          COVERAGE_CONTENT=$(jq -Rs . < coverage_status.json)
+      
+          # Формуємо payload
+          DATA=$(cat <<EOF
+            {
+              "description": "Test coverage and status badges",
+              "files": {
+                "test_status.json": {
+                  "content": $TEST_CONTENT
+                },
+                "coverage_status.json": {
+                  "content": $COVERAGE_CONTENT
+                }
+              }
+            }
+            EOF
+          )
+          echo "$DATA"  # Для дебагу: перевірте, що вивід є валідним JSON
+      
+          # Виконуємо PATCH запит
           curl -X PATCH "https://api.github.com/gists/$GIST_ID" \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            -d @- << 'EOF'
-          {
-            "description": "Test coverage and status badges",
-            "files": {
-              "test_status.json": {
-                "content": "'"$(jq -Rs . < test_status.json)"'"
-              },
-              "coverage_status.json": {
-                "content": "'"$(jq -Rs . < coverage_status.json)"'"
-              }
-            }
-          }
-          EOF
+            -d "$DATA"
