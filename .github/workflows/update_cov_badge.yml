@@ -38,7 +38,7 @@ jobs:
           TEST_STATUS=$?
           echo "Test Status: $TEST_STATUS"
 
-      - name: Set badge color for test result
+      - name: Set JSON for test result
         run: |
           TEST_STATUS=${{ steps.test-run.outcome }}
           
@@ -50,7 +50,7 @@ jobs:
             TEST_BADGE_COLOR="red"
             TEST_BADGE_MESSAGE="tests failed"
           fi
-          
+  
           # Створюємо JSON для значка тестів
           echo "{
             \"schemaVersion\": 1,
@@ -59,7 +59,7 @@ jobs:
             \"color\": \"$TEST_BADGE_COLOR\"
           }" > test_status_shields.json
 
-      - name: Set badge for coverage result
+      - name: Set JSON for coverage result
         run: |
           # Зчитуємо ваш coverage.json і генеруємо формат для Shields.io
           COVERAGE=$(jq -r '.totals.percent_covered_display' coverage.json)
@@ -82,6 +82,12 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add coverage_shields.json test_status_shields.json
-          git commit -m "Update coverage and test status badges"
+          
+          # Перевірка, чи є незадіяні файли в Git
+          git add coverage_shields.json test_status_shields.json || echo "No new files to add"
+          
+          # Якщо є зміни, фіксуємо їх
+          git commit -m "Update coverage and test status badges" || echo "No changes to commit"
+          
+          # Пушимо зміни
           git push
