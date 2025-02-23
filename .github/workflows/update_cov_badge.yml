@@ -32,19 +32,19 @@ jobs:
       - name: Create Shields.io JSON for coverage badge
         run: |
           # Зчитуємо ваш coverage.json і генеруємо формат для Shields.io
-          COVERAGE=$(jq '.totals.percent_covered_display' coverage.json)
+          COVERAGE=$(jq -r '.totals.percent_covered_display' coverage.json)
           COLOR="brightgreen"
-          
+
           # Перевірка на покриття менше ніж 50%
           if (( $(echo "$COVERAGE < 50" | bc -l) )); then
             COLOR="yellow"
           fi
-          
+
           # Створюємо новий JSON для Shields.io
           echo "{
             \"schemaVersion\": 1,
             \"label\": \"coverage\",
-            \"message\": \"$COVERAGE%\",
+            \"message\": \"$COVERAGE%\",  # додаємо % без лапок
             \"color\": \"$COLOR\"
           }" > coverage_shields.json
           
