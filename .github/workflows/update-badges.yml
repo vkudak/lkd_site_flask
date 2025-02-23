@@ -1,0 +1,92 @@
+name: Update Gist with Badges
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  update-gist:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        id: test-run
+        run: |
+          pytest
+          echo "Test Status: $?"
+
+      - name: Generate JSON badges
+        run: |
+          # Отримуємо статус тестів
+          TEST_STATUS=${{ steps.test-run.outcome }}
+          
+          if [ "$TEST_STATUS" == "success" ]; then
+            TEST_BADGE_COLOR="brightgreen"
+            TEST_BADGE_MESSAGE="tests passed"
+          else
+            TEST_BADGE_COLOR="red"
+            TEST_BADGE_MESSAGE="tests failed"
+          fi
+
+          # Генеруємо значок для тестів
+          echo "{
+            \"schemaVersion\": 1,
+            \"label\": \"tests\",
+            \"message\": \"$TEST_BADGE_MESSAGE\",
+            \"color\": \"$TEST_BADGE_COLOR\"
+          }" > test_status.json
+
+          # Генеруємо значок для coverage
+          COVERAGE=$(jq -r '.totals.percent_covered_display' coverage.json)
+          COLOR="brightgreen"
+
+          if (( $(echo "$COVERAGE < 25" | bc -l) )); then
+            COLOR="red"
+          elif (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            COLOR="yellow"
+          fi
+
+          echo "{
+            \"schemaVersion\": 1,
+            \"label\": \"coverage\",
+            \"message\": \"$COVERAGE%\",
+            \"color\": \"$COLOR\"
+          }" > coverage_status.json
+
+          # Об'єднуємо в один JSON-файл
+          echo "{
+            \"test_status\": $(cat test_status.json),
+            \"coverage\": $(cat coverage_status.json)
+          }" > badges.json
+
+      - name: Update Gist with badges.json
+        run: |
+          GIST_ID="cd865320b628af7303721348b27ce3f0"  # Замініть на ваш ID Gist
+          GITHUB_TOKEN=${{ secrets.GIST_TOKEN }}
+
+          curl -X PATCH "https://api.github.com/gists/$GIST_ID" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d @- << EOF
+          {
+            "description": "Test coverage and status badges",
+            "files": {
+              "badges.json": {
+                "content": $(jq -Rs . < badges.json)
+              }
+            }
+          }
+          EOF
