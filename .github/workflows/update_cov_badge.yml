@@ -20,6 +20,14 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Cache Python dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
@@ -32,8 +40,10 @@ jobs:
 
       - name: Set badge color for test result
         run: |
-          # Якщо всі тести пройшли, то Test Status = 0, інакше = 1
-          if [ $TEST_STATUS -eq 0 ]; then
+          TEST_STATUS=${{ steps.test-run.outcome }}
+          
+          # Якщо всі тести пройшли, то Test Status = success, інакше = failure
+          if [ "$TEST_STATUS" == "success" ]; then
             TEST_BADGE_COLOR="brightgreen"
             TEST_BADGE_MESSAGE="tests passed"
           else
@@ -49,7 +59,7 @@ jobs:
             \"color\": \"$TEST_BADGE_COLOR\"
           }" > test_status_shields.json
 
-      - name: Create Shields.io JSON for coverage badge
+      - name: Set badge for coverage result
         run: |
           # Зчитуємо ваш coverage.json і генеруємо формат для Shields.io
           COVERAGE=$(jq -r '.totals.percent_covered_display' coverage.json)

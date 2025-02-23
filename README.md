@@ -1,4 +1,4 @@
-![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/your-username/your-repository/main/test_status_shields.json)
+![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/master/test_status_shields.json)
 ![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/master/coverage_shields.json)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-raw/vkudak/lkd_site_flask)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/vkudak/lkd_site_flask)
