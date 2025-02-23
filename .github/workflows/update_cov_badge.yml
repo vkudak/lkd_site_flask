@@ -1,0 +1,57 @@
+name: Update Coverage Badge
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  update-coverage-badge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: |
+          pytest 
+          # --cov=your_package_name --cov-report=json:coverage.json
+
+      - name: Create Shields.io JSON for coverage badge
+        run: |
+          # Зчитуємо ваш coverage.json і генеруємо формат для Shields.io
+          COVERAGE=$(jq '.totals.percent_covered_display' coverage.json)
+          COLOR="brightgreen"
+          
+          # Перевірка на покриття менше ніж 50%
+          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            COLOR="yellow"
+          fi
+          
+          # Створюємо новий JSON для Shields.io
+          echo "{
+            \"schemaVersion\": 1,
+            \"label\": \"coverage\",
+            \"message\": \"$COVERAGE%\",
+            \"color\": \"$COLOR\"
+          }" > coverage_shields.json
+          
+      - name: Commit and push coverage badge update
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add coverage_shields.json
+          git commit -m "Update Shields.io coverage badge JSON"
+          git push
