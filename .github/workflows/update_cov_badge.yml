@@ -33,9 +33,9 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests with coverage
+        id: test-run
         run: |
-          pytest 
-          TEST_STATUS=$?
+          pytest
           echo "Test Status: $TEST_STATUS"
 
       - name: Set JSON for test result
