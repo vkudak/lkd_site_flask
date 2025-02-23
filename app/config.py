@@ -55,7 +55,7 @@ class DevConfig(Config):
 class TestConfig:
     DEBUG = False
     TESTING = True  # Увімкнено тестовий режим
-    SECRET_KEY = environ.get('SECRET_KEY')
+    SECRET_KEY = 'secret_test_777' #environ.get('SECRET_KEY')
     DATABASE_URI = "sqlite:///test.db"  # Окрема тестова база
     SQLALCHEMY_TRACK_MODIFICATIONS = False # Warning if skip this option
     WTF_CSRF_ENABLED = False
