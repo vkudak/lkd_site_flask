@@ -44,7 +44,7 @@ jobs:
           echo "{
             \"schemaVersion\": 1,
             \"label\": \"coverage\",
-            \"message\": \"$COVERAGE%\",  # додаємо % без лапок
+            \"message\": \"$COVERAGE%\",
             \"color\": \"$COLOR\"
           }" > coverage_shields.json
           
