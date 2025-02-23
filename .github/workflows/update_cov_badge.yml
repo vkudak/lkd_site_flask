@@ -27,7 +27,27 @@ jobs:
       - name: Run tests with coverage
         run: |
           pytest 
-          # --cov=your_package_name --cov-report=json:coverage.json
+          TEST_STATUS=$?
+          echo "Test Status: $TEST_STATUS"
+
+      - name: Set badge color for test result
+        run: |
+          # Якщо всі тести пройшли, то Test Status = 0, інакше = 1
+          if [ $TEST_STATUS -eq 0 ]; then
+            TEST_BADGE_COLOR="brightgreen"
+            TEST_BADGE_MESSAGE="tests passed"
+          else
+            TEST_BADGE_COLOR="red"
+            TEST_BADGE_MESSAGE="tests failed"
+          fi
+          
+          # Створюємо JSON для значка тестів
+          echo "{
+            \"schemaVersion\": 1,
+            \"label\": \"tests\",
+            \"message\": \"$TEST_BADGE_MESSAGE\",
+            \"color\": \"$TEST_BADGE_COLOR\"
+          }" > test_status_shields.json
 
       - name: Create Shields.io JSON for coverage badge
         run: |
@@ -52,6 +72,6 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add coverage_shields.json
-          git commit -m "Update Shields.io coverage badge JSON"
+          git add coverage_shields.json test_status_shields.json
+          git commit -m "Update coverage and test status badges"
           git push
