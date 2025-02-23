@@ -1,5 +1,7 @@
-![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/master/test_status_shields.json)
-![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/master/coverage_shields.json)
+<!-- ![Tests](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/master/test_status_shields.json) -->
+<!-- ![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/master/coverage_shields.json) -->
+![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/vkudak/cd865320b628af7303721348b27ce3f0/raw/badges.json&label=Coverage)
+![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/vkudak/cd865320b628af7303721348b27ce3f0/raw/badges.json&label=Tests)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-raw/vkudak/lkd_site_flask)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/vkudak/lkd_site_flask)
 ![GitHub Release](https://img.shields.io/github/release/vkudak/lkd_site_flask)
