@@ -1,5 +1,5 @@
 [//]: # (![PyTest]&#40;coverage.svg&#41;)
-![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/main/coverage.json)
+![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/vkudak/lkd_site_flask/main/coverage_shields.json)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-raw/vkudak/lkd_site_flask)
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-closed/vkudak/lkd_site_flask)
 ![GitHub Release](https://img.shields.io/github/release/vkudak/lkd_site_flask)
