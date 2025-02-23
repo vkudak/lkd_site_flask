@@ -41,7 +41,7 @@ jobs:
             TEST_BADGE_MESSAGE="tests failed"
           fi
 
-          # Генеруємо значок для тестів
+          # Генеруємо окремий JSON для тестів
           echo "{
             \"schemaVersion\": 1,
             \"label\": \"tests\",
@@ -66,26 +66,23 @@ jobs:
             \"color\": \"$COLOR\"
           }" > coverage_status.json
 
-          # Об'єднуємо в один JSON-файл
-          echo "{
-            \"test_status\": $(cat test_status.json),
-            \"coverage\": $(cat coverage_status.json)
-          }" > badges.json
-
-      - name: Update Gist with badges.json
+      - name: Update Gist with separate JSON files
         run: |
-          GIST_ID="cd865320b628af7303721348b27ce3f0"  # Замініть на ваш ID Gist
+          GIST_ID="cd865320b628af7303721348b27ce3f0"  # Ваш ID Gist
           GITHUB_TOKEN=${{ secrets.GIST_TOKEN }}
 
           curl -X PATCH "https://api.github.com/gists/$GIST_ID" \
             -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
-            -d @- << EOF
+            -d @- << 'EOF'
           {
             "description": "Test coverage and status badges",
             "files": {
-              "badges.json": {
-                "content": $(jq -Rs . < badges.json)
+              "test_status.json": {
+                "content": "'"$(jq -Rs . < test_status.json)"'"
+              },
+              "coverage_status.json": {
+                "content": "'"$(jq -Rs . < coverage_status.json)"'"
               }
             }
           }
