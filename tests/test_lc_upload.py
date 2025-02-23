@@ -7,15 +7,15 @@ import logging
 from app import bcrypt
 
 
-def create_super_user():
+def create_super_user(eb_access=True, is_admin=True, sat_access=True):
     hashed_password = bcrypt.generate_password_hash("user_pass")
     hashed_password = hashed_password.decode("utf-8", "ignore")
     new_user = User(username="super_user", password=hashed_password,
                     site_name="site", site_lat=48, site_lon=22, site_elev=180
                     )
-    new_user.sat_access = True
-    new_user.is_admin = True
-    new_user.eb_access = True
+    new_user.sat_access = sat_access
+    new_user.is_admin = is_admin
+    new_user.eb_access = eb_access
 
     db.session.add(new_user)
     db.session.commit()

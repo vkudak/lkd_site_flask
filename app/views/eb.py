@@ -66,6 +66,9 @@ def eb_list():
             db.session.commit()
             cache.clear()
 
+            flash("Star successfully added!", "success")
+            return redirect(url_for("eb.eb_list"))  # Повернення на ту ж сторінку
+
         # stars = Star.return_all()
         # return render_template('eb_list.html', stars=stars, user=current_user, eb_form=eb_form)
         if request.method == "GET":
