@@ -16,6 +16,7 @@ from bokeh.models.arrow_heads import TeeHead
 
 from scipy.signal import find_peaks
 from astropy.timeseries import LombScargle
+from astropy.time import Time
 from sklearn.preprocessing import minmax_scale
 from pdmpy import pdm
 
@@ -263,20 +264,33 @@ def process_lc_file(file, file_ext, db, app):
                     filt = l[1].strip("\n").strip("\r")
             fs.seek(0)
 
-            try:  # ##################################
-                flux, flux_err, m, merr, az, el, rg = np.genfromtxt(fs, skip_header=True,
-                                                                    usecols=(6, 7, 8, 9, 10, 11, 12,),
-                                                                    unpack=True)
-                fs.seek(0)
-                lcd, lct = np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0, 1,),
-                                       dtype=None, encoding="utf-8")
-                lctime = list(zip(lcd, lct))
-                lctime = [x[0] + " " + x[1] for x in lctime]
-                lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
+            cols = np.genfromtxt(fs, skip_header=True, unpack=True)
+            # print(len(cols))
+            fs.seek(0)
 
-                # Bed option
-                # lctime = [x + " " + t for x in lcd for t in lct]
-                # lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
+            try:  # ##################################
+
+                fs.seek(0)
+
+                if len(cols) == 14: # UT format
+                    flux, flux_err, m, merr, az, el, rg = np.genfromtxt(fs, skip_header=True,
+                                                                        usecols=(6, 7, 8, 9, 10, 11, 12,),
+                                                                        unpack=True)
+                    fs.seek(0)
+                    lcd, lct = np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0, 1,),
+                                           dtype=None, encoding="utf-8")
+                    lctime = list(zip(lcd, lct))
+                    lctime = [x[0] + " " + x[1] for x in lctime]
+                    lctime = [datetime.strptime(x, "%Y-%m-%d %H:%M:%S.%f") for x in lctime]
+
+                elif len(cols) == 13: # JD format
+                    flux, flux_err, m, merr, az, el, rg = np.genfromtxt(fs, skip_header=True,
+                                                                        usecols=(5, 6, 7, 8, 9, 10, 11,),
+                                                                        unpack=True)
+                    fs.seek(0)
+                    lc_jd = np.genfromtxt(fs, skip_header=True, unpack=True, usecols=(0,),
+                                             dtype=None, encoding="utf-8")
+                    lctime = Time(lc_jd, format='jd', scale='utc').datetime
 
                 sat = Satellite.get_by_norad(norad=norad)
                 if not sat:  # sat == []
@@ -851,7 +865,7 @@ def lsp_calc(lc_id=None, lc=None):
         # nyquist_factor=0.5,
         minimum_frequency=min_freq,
         maximum_frequency=max_freq,
-        samples_per_peak=30,
+        samples_per_peak=50,
         normalization='standard')
 
     periods = 1.0 / frequency
