@@ -105,6 +105,51 @@ def test_phx_lc_upload(client, caplog, auth):
     lc1 = Lightcurve.query.filter_by(ut_start=st_time).first()
     assert lc1 is not None
 
+
+def test_phx_lc_upload_jd(client, caplog, auth):
+    """Перевіряє завантаження НОВИХ файлів PHX кривих блиску через форму AddLcForm."""
+    create_super_user()
+    auth.login("super_user", "user_pass")  # Імітація входу
+
+    with caplog.at_level(logging.INFO):  # Перехоплення логів INFO+
+        # Імітуємо файл для завантаження
+        file1 = FileStorage(
+            stream=open("tests/lc_to_upload/51511_20250311_UT173120_OES30.phV", "rb"),
+            filename="51511_20250311_UT173120_OES30.phV",
+            content_type="application/octet-stream"
+        )
+
+        # Виконуємо POST-запит до ендпоінту завантаження кривих блиску
+        response = client.post(
+            "/sat_phot.html",  # Замініть на правильний шлях у вашому застосунку
+            data={
+                "lc_file": [file1],  # Імітуємо список файлів
+                "add": "1"  # Імітуємо натискання кнопки "Add"
+            },
+            content_type="multipart/form-data",
+            follow_redirects=True
+        )
+
+    assert "successfully processed" in caplog.text
+    # assert "Processing file:" in caplog.text
+
+    # # Перевіряємо, що сервер відповів редіректом або статусом успіху
+    assert response.status_code in [200, 302]
+
+    # Якщо є редірект, перевіряємо, що він правильний
+    if response.status_code == 302:
+        assert "/sat_phot.html" in response.headers["Location"]  # Замініть на правильну URL
+
+    # Перевіряємо, чи файли були успішно додані (якщо вони зберігаються в БД)
+    # lcs = Lightcurve.get_all()
+    # for lc in lcs:
+    #     print(lc.ut_start, lc.ut_end)
+
+    st_time = datetime.strptime('2025-03-11 17:31:20.119354', '%Y-%m-%d %H:%M:%S.%f')
+    lc1 = Lightcurve.query.filter_by(ut_start=st_time).first()
+    assert lc1 is not None
+
+
 # TODO: Test invalid LC file. Catch
 # log -> File {file.filename} processed with error. Skipping this file...."
 # log -> 'Wrong file ext in'
