@@ -36,6 +36,7 @@ class User(db.Model, UserMixin):
 
     eb_access = db.Column(db.Boolean, nullable=False, default=False)
     sat_access = db.Column(db.Boolean, nullable=False, default=False)
+    sat_lc_upload = db.Column(db.Boolean, nullable=False, default=False)
     is_admin = db.Column(db.Boolean, nullable=False, default=False)
     # https://stackoverflow.com/questions/33705697/alembic-integrityerror-column-contains-null-values-when-adding-non-nullable
 
