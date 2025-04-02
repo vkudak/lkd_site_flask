@@ -105,6 +105,8 @@ class UserList(Resource):
 @api.route("/<int:id>")
 class UserResource(Resource):
     @api.marshal_with(user_model)
+    @login_required
+    @api.doc(security="SessionAuth", description="Requires login")
     def get(self, id):
         """Get user by ID"""
         user = User.query.get_or_404(id)
@@ -112,8 +114,12 @@ class UserResource(Resource):
 
     @api.expect(user_model)
     @api.marshal_with(user_model)
+    @login_required
+    @api.doc(security="SessionAuth", description="Requires login & admin rights")
     def put(self, id):
         """Update user by ID"""
+        if not current_user.is_admin:  # Directly check user role
+            return {"message": "Access denied. Admins only."}, 403
         user = User.query.get_or_404(id)
         data = request.json
         user.name = data["name"]
@@ -122,6 +128,7 @@ class UserResource(Resource):
         return user
 
     @login_required
+    @api.doc(security="SessionAuth", description="Requires login & admin rights")
     def delete(self, id):
         """Delete user by ID"""
         if not current_user.is_admin:  # Directly check user role
