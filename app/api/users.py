@@ -104,33 +104,40 @@ class UserList(Resource):
 
 @api.route("/<int:id>")
 class UserResource(Resource):
-    @api.marshal_with(user_model)
-    @login_required
-    @api.doc(security="SessionAuth", description="Requires login")
+    # @api.marshal_with(user_model)
+    @api.response(200, "Success", [user_model])  # Document success response
+    @api.response(401, "Authentication required", error_model)  # Document 401 error response
+    @api.doc(security="SessionAuth", description="Requires login",  responses={401: "Authentication required"})
     def get(self, id):
         """Get user by ID"""
+        if not current_user.is_authenticated:
+            return {"message": "Authentication required. Please log in."}, 401
         user = User.query.get_or_404(id)
-        return user
 
-    @api.expect(user_model)
-    @api.marshal_with(user_model)
-    @login_required
-    @api.doc(security="SessionAuth", description="Requires login & admin rights")
-    def put(self, id):
-        """Update user by ID"""
-        if not current_user.is_admin:  # Directly check user role
-            return {"message": "Access denied. Admins only."}, 403
-        user = User.query.get_or_404(id)
-        data = request.json
-        user.name = data["name"]
-        user.email = data["email"]
-        db.session.commit()
-        return user
+        return user.to_dict()
 
-    @login_required
-    @api.doc(security="SessionAuth", description="Requires login & admin rights")
+    # @api.expect(user_model)
+    # @api.marshal_with(user_model)
+    # @login_required
+    # @api.doc(security="SessionAuth", description="Requires login & admin rights")
+    # def put(self, id):
+    #     """Update user by ID"""
+    #     if not current_user.is_admin:  # Directly check user role
+    #         return {"message": "Access denied. Admins only."}, 403
+    #     user = User.query.get_or_404(id)
+    #     data = request.json
+    #     user.name = data["name"]
+    #     user.email = data["email"]
+    #     db.session.commit()
+    #     return user
+
+    @api.response(204, "Success")
+    @api.doc(security="SessionAuth", description="Requires login & admin rights",
+             responses={401: "Authentication required", 403: "Admin only", 204: "Delete successfully"})
     def delete(self, id):
         """Delete user by ID"""
+        if not current_user.is_authenticated:
+            return {"message": "Authentication required. Please log in."}, 401
         if not current_user.is_admin:  # Directly check user role
             return {"message": "Access denied. Admins only."}, 403
 

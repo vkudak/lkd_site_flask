@@ -54,6 +54,13 @@ class User(db.Model, UserMixin):
                     for x in users]
         return users
 
+    def to_dict(self):
+        user_dict = {"id": self.id, "username": self.username, "site_name": self.site_name,
+         "site_lat": self.site_lat, "site_lon": self.site_lon, "site_elev": self.site_elev,
+         "is_admin": self.is_admin, "sat_access": self.sat_access, "eb_access": self.eb_access,
+         "sat_lc_upload": self.sat_lc_upload}
+        return user_dict
+
     @classmethod
     def get_all_sites(cls):
         """
