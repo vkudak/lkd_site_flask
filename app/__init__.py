@@ -103,6 +103,20 @@ def create_app():
         cors.init_app(app)
         # cors.init_app(app, resources={r"/*": {"origins": "http://localhost:5000"}})  # Adjust to your domain
 
+        # # Get the current environment (you can also set this using environment variables)
+        # environment = app.config['FLASK_ENV']
+        #
+        # if environment == 'production':
+        #     # In production, allow multiple origins for paths under `/api/*`
+        #     cors.init_app(app,
+        #                   resources={r"/api/*": {
+        #                       "origins": ["https://test.com", "http://test.com", "https://www.test.com"]}
+        #                   }
+        #                   )
+        # else:
+        #     # In development, allow any localhost port for paths under `/api/*`
+        #     cors.init_app(app, resources={r"/api/*": {"origins": "http://localhost:*"}})
+
         cache.init_app(app,
                        config={
                            #'CACHE_TYPE': 'SimpleCache',
