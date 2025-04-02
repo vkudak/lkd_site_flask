@@ -41,11 +41,17 @@ class User(db.Model, UserMixin):
     # https://stackoverflow.com/questions/33705697/alembic-integrityerror-column-contains-null-values-when-adding-non-nullable
 
     @classmethod
-    def get_all(cls):
+    def get_all(cls, to_list=False):
         """
         Return all Users
         """
         users = db.session.query(cls).order_by(cls.id).all()
+        if to_list:
+            return [{"id":x.id, "username":x.username, "site_name":x.site_name,
+                     "site_lat":x.site_lat, "site_lon":x.site_lon, "site_elev":x.site_elev,
+                     "is_admin":x.is_admin, "sat_access": x.sat_access, "eb_access": x.eb_access,
+                     "sat_lc_upload": x.sat_lc_upload}
+                    for x in users]
         return users
 
     @classmethod

@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, jsonify
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_session import Session
@@ -76,6 +76,11 @@ def create_app():
                 app.logger.info("Load User with username <%s>", user.username)
             return user
 
+        # Customize unauthorized response for APIs
+        @login_manager.unauthorized_handler
+        def unauthorized():
+            return jsonify({"message": "Authentication required. Please log in."}), 401
+
         # csrf.init_app(app)
 
         from .views import auth_bp, home_bp, eb_bp, sat_bp, sat_view_bp
@@ -85,12 +90,19 @@ def create_app():
         app.register_blueprint(sat_bp)
         app.register_blueprint(sat_view_bp)
 
+        from app.api import api_bp
+        app.register_blueprint(api_bp)
+        csrf.exempt(api_bp)    # <---- This line disables CSRF for API
+
+
         login_manager.login_view = "auth.login"
         # app.app_context().push()
 
         Session(app)
         csrf.init_app(app)
         cors.init_app(app)
+        # cors.init_app(app, resources={r"/*": {"origins": "http://localhost:5000"}})  # Adjust to your domain
+
         cache.init_app(app,
                        config={
                            #'CACHE_TYPE': 'SimpleCache',
