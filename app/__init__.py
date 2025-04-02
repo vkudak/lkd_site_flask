@@ -1,5 +1,5 @@
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, redirect, url_for
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
 from flask_session import Session
@@ -76,11 +76,6 @@ def create_app():
                 app.logger.info("Load User with username <%s>", user.username)
             return user
 
-        # Customize unauthorized response for APIs
-        @login_manager.unauthorized_handler
-        def unauthorized():
-            return jsonify({"message": "Authentication required. Please log in."}), 401
-
         # csrf.init_app(app)
 
         from .views import auth_bp, home_bp, eb_bp, sat_bp, sat_view_bp
@@ -97,6 +92,17 @@ def create_app():
 
         login_manager.login_view = "auth.login"
         # app.app_context().push()
+
+        # Customize the unauthorized handler
+        @login_manager.unauthorized_handler
+        def unauthorized():
+            if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+                # If the request expects a JSON response (API call), return the JSON error message
+                return jsonify({"message": "Authentication required. Please log in."}), 401
+            else:
+                # Otherwise, redirect to the login page for the web interface
+                return redirect(url_for('auth.login'))
+
 
         Session(app)
         csrf.init_app(app)

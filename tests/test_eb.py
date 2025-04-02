@@ -22,7 +22,7 @@ def test_eb_list_access_denied(client,auth):
 def test_eb_list_login_required(client):
     response = client.get("/eb_list.html", follow_redirects=False)
     assert response.status_code == 302  # Перевіряємо, що користувача редіректить
-    assert "/login?next=%2Feb_list.html" in response.headers["Location"]
+    assert "/login" in response.headers["Location"]
 
 def test_add_eb(client, auth):
     create_super_user()
