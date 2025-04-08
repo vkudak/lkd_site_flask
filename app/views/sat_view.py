@@ -228,9 +228,16 @@ def add_satellite():
     Add Sat_View to DataBase by Norad number and Priority
     """
     norad = request.form['norad']
+    cospar = request.form['cospar']
     priority = request.form['priority']
 
-    new_satellite = SatForView(norad=int(norad), cospar='', name='', priority=int(priority))
+    # check if satellite exists
+    if SatForView.query.filter_by(norad=norad).first() or SatForView.query.filter_by(cospar=cospar).first():
+        flash(f"Satellite with NORAD={norad} or COSPAR={cospar} already exist.", "error")
+        current_app.logger.error(f"Cant add sat. Satellite with NORAD={norad} or COSPAR={cospar} already exist.")
+        return redirect(url_for('sat_view.sat_select'))
+
+    new_satellite = SatForView(norad=int(norad), cospar=cospar, name='', priority=int(priority))
     db.session.add(new_satellite)
     db.session.commit()
     flash(f"Satellite {norad} added successfully.", "success")
