@@ -68,6 +68,8 @@ def space_track_callback(until):
 
 
 def update_tle(old_tle, t2):
+    if len(old_tle) == 0:
+        return True
     try:
         username = os.getenv('ST_USERNAME')
         password = os.getenv('ST_PASSWORD')

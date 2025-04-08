@@ -560,7 +560,7 @@ class SatForView(db.Model):
         f = BytesIO(str.encode(self.tle))
         sat = list(parse_tle_file(f, ts))
         sat = sat[0]
-        if self.name == '' or self.cospar == '':
+        if self.name == '' or self.name == 'None' or self.cospar == '' or self.cospar == 'None':
             self.name = sat.name
             self.cospar = sat.model.intldesg
             db.session.commit()
