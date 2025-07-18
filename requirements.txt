@@ -51,6 +51,12 @@ statsmodels~=0.14.1
 pandas~=2.1.4
 spacetrack~=1.3.1
 skyfield~=1.49
+# Moon calendar
+requests~=2.32.4
+openmeteo_requests~=1.5.0
+requests_cache~=1.2.1
+retry_requests~=2.0.0
+
 
 # API
 flask_restx

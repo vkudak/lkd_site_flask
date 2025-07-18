@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4" style="text-align: center">Фази Місяця та прогноз хмірності (на 22:00) для м. Ужгород</h2>
+    <table class="table table-bordered text-center align-middle" style="width: 100%">
+        <thead class="table-light">
+            <tr>
+                <th>Дата</th>
+                <th>Фаза Місяця</th>
+                <th>Ілюмінація</th>
+                <th>Хмари</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for date, data in moon_calendar.items() %}
+                <tr>
+                    <td>{{ date }}</td>
+                    <td>
+{#                        <div><strong>{{ data.phase.phase }}</strong></div>#}
+                        <div>
+                            <img src="{{ url_for('static', filename='moon/' ~ data.phase.img) }}" width="50" height="50" alt="{{ data.phase.phase }}">
+                        </div>
+                    </td>
+                    <td>{{ data.phase.illumination }}%</td>
+
+                    <td>
+                        {% if data.weather.cloudcover == 'No data' %}
+                            No data
+                        {% else %}
+                            {{ data.weather.cloudcover }}%
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

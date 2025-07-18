@@ -684,3 +684,18 @@ samp {
 .polarsublayer.angular-line path {
     stroke: green !important; /* Встановлення кольору зелений */
 }
+
+
+/* Additional styles for Moon*/
+.mb-4 {
+    margin-bottom: 1.5rem; /* Bottom margin */
+}
+.mt-4 {
+    margin-top: 1.5rem; /* Top margin */
+}
+.align-middle {
+    vertical-align: middle; /* Align text vertically in the center */
+}
+.text-center {
+    text-align: center; /* Center-align text */
+}
