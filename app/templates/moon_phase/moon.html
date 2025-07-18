@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="container mt-4">
-    <h2 class="mb-4" style="text-align: center">Фази Місяця та прогноз хмірності (на 22:00) для м. Ужгород</h2>
+    <h2 class="mb-4" style="text-align: center">Фази Місяця та прогноз хмірності (на 20:00) для м. Ужгород</h2>
     <table class="table table-bordered text-center align-middle" style="width: 100%">
         <thead class="table-light">
             <tr>
                 <th>Дата</th>
                 <th>Фаза Місяця</th>
                 <th>Ілюмінація</th>
+                <th>Схід</th>
+                <th>Захід</th>
                 <th>Хмари</th>
             </tr>
         </thead>
@@ -22,6 +24,8 @@
                         </div>
                     </td>
                     <td>{{ data.phase.illumination }}%</td>
+                    <td>{{ data.phase.moonrise }}</td>
+                    <td>{{ data.phase.moonset }}</td>
 
                     <td>
                         {% if data.weather.cloudcover == 'No data' %}

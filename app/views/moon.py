@@ -1,11 +1,13 @@
+import os
 from flask import Blueprint, render_template
 from datetime import datetime, timedelta
 import ephem
-import requests
+import pytz
+
 import requests_cache
 import openmeteo_requests
 from retry_requests import retry
-import os
+
 
 # bp = Blueprint('moon', __name__)
 
@@ -39,10 +41,10 @@ def get_weather_data(days=16):  # Set to 16 to match the API's limit
     if responses:
         hourly = responses[0].Hourly()  # Get the first response
         hourly_cloud_cover = hourly.Variables(0).ValuesAsNumpy()  # Get cloud cover values
-
+        # print(hourly_cloud_cover)
         # Get the specific time for each day (20:00 is the 20th hour)
         # Assuming the data is returned in the order per day
-        hours = hourly.Time()  # Time in seconds since epoch
+        # hours = hourly.Time()  # Time in seconds since epoch
         for i in range(days):
             # Find the index for 20:00 (8 PM) on each day
             # Each day has 24 hours of data, so for each day 'i', 20:00 would be at 'i*24 + 20'
@@ -58,16 +60,36 @@ def get_moon_phases(days=30):
     observer = ephem.Observer()
     observer.lat = UZHGOROD_LAT
     observer.lon = UZHGOROD_LON
-    today = datetime.utcnow()
+
+    # Define Kiev timezone
+    kiev_tz = pytz.timezone('Europe/Kiev')
+
+    today = datetime.now(tz=kiev_tz)
+    # print(today)
 
     phases = []
     for i in range(days):
-        date = today + timedelta(days=i)
-        observer.date = date
-        moon = ephem.Moon(observer)
-        phase = moon.phase  # у відсотках
+        date = today.replace(hour=22, minute=00) + timedelta(days=i-1)
 
-        # Визначення опису фази (спрощено)
+        # Set the observer's date to the current date in the loop
+        observer.date = today.replace(hour=22, minute=00) + timedelta(days=i)
+
+        moon = ephem.Moon(observer)
+
+        # Calculate phase and times
+        phase = moon.phase  # in percentage\
+        moonrise = observer.next_rising(moon)
+        moonset = observer.next_setting(moon)
+
+        # Convert times to UTC
+        moonrise_utc = moonrise.datetime()
+        moonset_utc = moonset.datetime()
+        # Localize to Kiev timezone
+        moonrise_time = moonrise_utc.replace(tzinfo=pytz.utc).astimezone(kiev_tz).strftime('%H:%M:%S')
+        moonset_time = moonset_utc.replace(tzinfo=pytz.utc).astimezone(kiev_tz).strftime('%H:%M:%S')
+
+    # print(moonrise_time, moonset_time)
+        # Determine phase name (simplified)
         if phase < 1:
             phase_name = 'New Moon'
         elif phase < 50:
@@ -78,21 +100,23 @@ def get_moon_phases(days=30):
             phase_name = 'Waxing Gibbous'
         elif phase >= 99:
             phase_name = 'Full Moon'
-        elif phase > 50:
+        elif 50 < phase < 99:
             phase_name = 'Waning Gibbous'
         elif 49 <= phase < 51:
             phase_name = 'Last Quarter'
         else:
             phase_name = 'Waning Crescent'
 
+        # print(date.day, moonrise_time, moonset_time)
         phases.append({
             'day': date.day,
             'illumination': round(phase, 1),
             'phase': phase_name,
-            # 'img': f"/static/moon/{phase_name.replace(' ', '_').lower()}.png",
+            'moonrise': moonrise_time,
+            'moonset': moonset_time,
+            # 'img': f"/static/moon/{phase_name.replace(' ', '').lower()}.png",
             'img': f"{phase_name.replace(' ', '_').lower()}.png"
         })
-        # print(f"/static/moon/{phase_name.replace(' ', '_').lower()}.png")
     return phases
 
 
