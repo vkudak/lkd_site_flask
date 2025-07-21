@@ -55,6 +55,37 @@ def get_weather_data(days=16):  # Set to 16 to match the API's limit
     return weather_data
 
 
+def get_planet_elevations(days=16):
+    observer = ephem.Observer()
+    observer.lat = str(UZHGOROD_LAT)
+    observer.lon = str(UZHGOROD_LON)
+
+    # Set time zone offset for Kyiv (UTC+3)
+    kiev_tz = pytz.timezone('Europe/Kiev')
+    today = datetime.now(tz=kiev_tz)
+    planets_elevations = []
+    for i in range(days):
+        date = datetime.now(tz=kiev_tz) + timedelta(days=i)
+
+        # Set the observer's date to 20:00 local time (UTC+3)
+        observer.date = date.replace(hour=20, minute=0, second=0, microsecond=0)
+        # Get elevation for Jupiter, Saturn, and Mars
+        jupiter = ephem.Jupiter(observer)
+        saturn = ephem.Saturn(observer)
+        mars = ephem.Mars(observer)
+        # Convert elevation from radians to degrees
+        jupiter_elevation_degrees = jupiter.alt * (180.0 / 3.14159265)  # Convert radians to degrees
+        saturn_elevation_degrees = saturn.alt * (180.0 / 3.14159265)
+        mars_elevation_degrees = mars.alt * (180.0 / 3.14159265)
+        planets_elevations.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'jupiter_elevation': jupiter_elevation_degrees,  # Elevation in degrees
+            'saturn_elevation': saturn_elevation_degrees,    # Elevation in degrees
+            'mars_elevation': mars_elevation_degrees
+        })
+    return planets_elevations
+
+
 # === Розрахунок фаз Місяця ===
 def get_moon_phases(days=30):
     observer = ephem.Observer()
@@ -125,6 +156,8 @@ def moon_view():
     days = 30  # Get data for the next 30 days
     moon_phases = get_moon_phases(days)
     weather_data = get_weather_data()
+    planet_elevations = get_planet_elevations(days)  # Get planet elevations
+
     # Combine moon phases with weather data
     moon_calendar = {}
     for i in range(days):
@@ -136,13 +169,22 @@ def moon_view():
         else:  # Use None for weather if day index exceeds available data
             weather = {'cloudcover': 'No data'}  # Use a string to indicate no data
 
+        # Add planet elevations
+        if i < len(planet_elevations):
+            planets = planet_elevations[i]
+        else:
+            planets = {'jupiter_elevation': None, 'saturn_elevation': None, 'mars_elevation': None}
+
         moon_calendar[date_str] = {
             'day': moon_phases[i]['day'],
             'phase': moon_phases[i],
-            'weather': weather
+            'weather': weather,
+            'jupiter_elevation': planets['jupiter_elevation'],  # in radians
+            'saturn_elevation': planets['saturn_elevation'],  # in radians
+            'mars_elevation': planets['mars_elevation']  # in radians
         }
 
     # print(moon_calendar)
 
     # return render_template("moon_phase/moon.html", moon_phases=moon_phases, weather=weather)
-    return render_template("moon_phase/moon.html", moon_calendar=moon_calendar)
+    return render_template("moon_phase/moon.html", moon_calendar=moon_calendar, elevation_unit='radians')

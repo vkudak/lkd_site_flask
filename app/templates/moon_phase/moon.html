@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4" style="width: 70%; max-width: 850px">
     <h2 class="mb-4" style="text-align: center">Фази Місяця та прогноз хмірності (на 20:00) для м. Ужгород</h2>
     <table class="table table-bordered text-center align-middle" style="width: 100%">
         <thead class="table-light">
@@ -11,6 +11,9 @@
                 <th>Схід</th>
                 <th>Захід</th>
                 <th>Хмари</th>
+                <th>h Юпітера</th>
+                <th>h Сатурна</th>
+                <th>h Марса</th>
             </tr>
         </thead>
         <tbody>
@@ -34,6 +37,10 @@
                             {{ data.weather.cloudcover }}%
                         {% endif %}
                     </td>
+                    <td>{{ data.jupiter_elevation | round(2) }}</td> <!-- Now directly in degrees -->
+                    <td>{{ data.saturn_elevation | round(2) }}</td>  <!-- Now directly in degrees -->
+                    <td>{{ data.mars_elevation | round(2) }}</td>    <!-- Now directly in degrees -->
+
                 </tr>
             {% endfor %}
         </tbody>
