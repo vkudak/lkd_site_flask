@@ -131,7 +131,7 @@ ul h4 {
 #logo {
 	top: 75px;
 	position: absolute;
-	left: 40px;
+	left: 150px;
 }
 
 #logo a {
@@ -430,6 +430,7 @@ input[type=submit]:active {
     top: 145px;
     height: 30px;
     /*border-bottom: solid 1px #B36643;*/
+    left: 50px;
 }
 
 #uname a {
