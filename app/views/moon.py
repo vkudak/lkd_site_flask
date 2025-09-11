@@ -95,15 +95,15 @@ def get_moon_phases(days=30):
     # Define Kiev timezone
     kiev_tz = pytz.timezone('Europe/Kiev')
 
-    today = datetime.now(tz=kiev_tz)
+    today = datetime.now(tz=pytz.utc) #(tz=kiev_tz)
     # print(today)
 
     phases = []
     for i in range(days):
-        date = today.replace(hour=22, minute=00) + timedelta(days=i-1)
+        # date = today.replace(hour=00, minute=00) + timedelta(days=i-1)
 
         # Set the observer's date to the current date in the loop
-        observer.date = today.replace(hour=22, minute=00) + timedelta(days=i)
+        observer.date = today.replace(hour=00, minute=00) + timedelta(days=i)
 
         moon = ephem.Moon(observer)
 
@@ -111,6 +111,8 @@ def get_moon_phases(days=30):
         phase = moon.phase  # in percentage\
         moonrise = observer.next_rising(moon)
         moonset = observer.next_setting(moon)
+
+        # print(observer.date, moonrise, moonset)
 
         # Convert times to UTC
         moonrise_utc = moonrise.datetime()
@@ -140,7 +142,7 @@ def get_moon_phases(days=30):
 
         # print(date.day, moonrise_time, moonset_time)
         phases.append({
-            'day': date.day,
+            'day': observer.date, #date.day,
             'illumination': round(phase, 1),
             'phase': phase_name,
             'moonrise': moonrise_time,
