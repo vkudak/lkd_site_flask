@@ -88,40 +88,12 @@ def get_planet_elevations(days=16):
 
 # === Розрахунок фаз Місяця ===
 def get_moon_phases(days=30):
-    observer = ephem.Observer()
-    observer.lat = UZHGOROD_LAT
-    observer.lon = UZHGOROD_LON
-
-    # Define Kiev timezone
-    kiev_tz = pytz.timezone('Europe/Kiev')
-
-    today = datetime.now(tz=pytz.utc) #(tz=kiev_tz)
-    # print(today)
+    today = datetime.now()
 
     phases = []
     for i in range(days):
-        # date = today.replace(hour=00, minute=00) + timedelta(days=i-1)
+        moonrise_time, moonset_time, phase = get_moon_rise_set(UZHGOROD_LAT, UZHGOROD_LON, today + timedelta(days=i))
 
-        # Set the observer's date to the current date in the loop
-        observer.date = today.replace(hour=00, minute=00) + timedelta(days=i)
-
-        moon = ephem.Moon(observer)
-
-        # Calculate phase and times
-        phase = moon.phase  # in percentage\
-        moonrise = observer.next_rising(moon)
-        moonset = observer.next_setting(moon)
-
-        # print(observer.date, moonrise, moonset)
-
-        # Convert times to UTC
-        moonrise_utc = moonrise.datetime()
-        moonset_utc = moonset.datetime()
-        # Localize to Kiev timezone
-        moonrise_time = moonrise_utc.replace(tzinfo=pytz.utc).astimezone(kiev_tz).strftime('%H:%M:%S')
-        moonset_time = moonset_utc.replace(tzinfo=pytz.utc).astimezone(kiev_tz).strftime('%H:%M:%S')
-
-    # print(moonrise_time, moonset_time)
         # Determine phase name (simplified)
         if phase < 1:
             phase_name = 'New Moon'
@@ -140,9 +112,8 @@ def get_moon_phases(days=30):
         else:
             phase_name = 'Waning Crescent'
 
-        # print(date.day, moonrise_time, moonset_time)
         phases.append({
-            'day': observer.date, #date.day,
+            'day': today.date,
             'illumination': round(phase, 1),
             'phase': phase_name,
             'moonrise': moonrise_time,
@@ -190,3 +161,69 @@ def moon_view():
 
     # return render_template("moon_phase/moon.html", moon_phases=moon_phases, weather=weather)
     return render_template("moon_phase/moon.html", moon_calendar=moon_calendar, elevation_unit='radians')
+
+def get_moon_rise_set(latitude, longitude, calc_datetime):
+    """
+    Function calculates rise and set of the Moon for a given latitude and longitude and date
+    Args:
+        latitude: latitude of observation site
+        longitude: latitude of observation site
+        calc_datetime: datetime object to calculate rise and set
+
+    Returns:
+        rise, set, phase: set of values (str, str, float)
+    """
+    # Використовуємо pytz для визначення часової зони
+    kiev_tz = pytz.timezone('Europe/Kiev')
+    calc_datetime = calc_datetime.replace(hour=12, minute=00)
+    # Створюємо дату, яка усвідомлює часову зону (aware datetime)
+    date = kiev_tz.localize(calc_datetime)
+
+    # ---- СКРИПТ ----
+    obs = ephem.Observer()
+    obs.lat = latitude
+    obs.lon = longitude
+    # висоту можна задати як obs.elev = 180 (метрів)
+
+    # У PyEphem усі дати в UTC, тому передаємо 'naive' datetime
+    # obs.date = date.replace(tzinfo=None) # або .astimezone(pytz.utc).replace(tzinfo=None)
+    # Краще зробити обчислення в UTC
+    obs.date = date.astimezone(pytz.utc)
+
+    moon = ephem.Moon()
+
+    # Час сходу та заходу
+    moon_prev_rise_utc = obs.previous_rising(moon)
+    moon_rise_utc = obs.next_rising(moon)
+    moon_set_utc = obs.next_setting(moon)
+
+    # Переводимо UTC дати в 'aware' локальний час
+    moon_prev_rise_local = pytz.utc.localize(moon_prev_rise_utc.datetime()).astimezone(kiev_tz)
+    moon_rise_local = pytz.utc.localize(moon_rise_utc.datetime()).astimezone(kiev_tz)
+    moon_set_local = pytz.utc.localize(moon_set_utc.datetime()).astimezone(kiev_tz)
+
+    times = {'rise': [moon_rise_local, abs(date - moon_rise_local)],
+             'prev_rise': [moon_prev_rise_local, abs(date - moon_prev_rise_local)],
+             'set': [moon_set_local, abs(date - moon_set_local)]
+             }
+
+    # Sort by the second element (index 1) of the value lists [1][1]
+    sorted_times_items = sorted(times.items(), key=lambda item: item[1][1])
+
+    # Знаходимо ключ найменш близького значення (третього елемента)
+    farthest_key = sorted_times_items[2][0]
+
+    # Визначаємо, який ключ потрібно видалити, згідно з новим правилом
+    if farthest_key == 'set':
+        key_to_remove = sorted_times_items[1][0]
+    else:
+        key_to_remove = farthest_key
+
+    times[key_to_remove] = None
+
+    phase = moon.phase
+
+    if times['rise'] is not None:
+        return times['rise'][0].strftime('%H:%M:%S'), times['set'][0].strftime('%H:%M:%S'), phase
+    else:
+        return times['prev_rise'][0].strftime('%H:%M:%S'), times['set'][0].strftime('%H:%M:%S'), phase
