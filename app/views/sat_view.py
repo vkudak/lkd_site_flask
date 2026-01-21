@@ -79,7 +79,7 @@ def update_tle(old_tle, t2):
         current_app.logger.info(f"Retrieving TLE for objects {old_tle}")
         t1s = t1.utc_strftime("%Y-%m-%d")
         t2s = t2.utc_strftime("%Y-%m-%d")
-        data = st.tle(norad_cat_id=[old_tle], epoch=f'{t1s}--{t2s}', orderby='epoch desc') # JSON
+        data = st.gp(norad_cat_id=[old_tle], epoch=f'{t1s}--{t2s}', orderby='epoch desc') # JSON
 
         for sat in old_tle:
             current_app.logger.info(f"Search TLE for object {sat}")
