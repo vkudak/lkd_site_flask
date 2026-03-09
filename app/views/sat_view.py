@@ -27,6 +27,7 @@ from datetime import datetime, timedelta
 from skyfield.iokit import parse_tle_file
 from io import BytesIO
 
+
 from app import cache
 from app.models import Satellite, db, Lightcurve, SatForView, User
 from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc, \
@@ -67,24 +68,81 @@ def space_track_callback(until):
     current_app.logger.info('Sleeping for {:d} seconds.'.format(duration))
 
 
+def filter_latest_tle(data):
+    """
+    Приймає список словників (JSON від Space-Track).
+    Повертає список словників, де для кожного NORAD_CAT_ID
+    залишено лише один запис з найновішою EPOCH.
+    """
+    # 1. Сортуємо весь список за EPOCH (від старіших до новіших)
+    # Це гарантує, що при ітерації новіший запис замінить старий у словнику
+    sorted_data = sorted(data, key=lambda x: x['EPOCH'])
+
+    # 2. Використовуємо словник, де ключем є ID супутника
+    temp_map = {}
+    for record in sorted_data:
+        norad_id = record['NORAD_CAT_ID']
+        temp_map[norad_id] = record  # Останній (найсвіжіший) запис перезапише попередні
+
+    # 3. Перетворюємо значення словника назад у список
+    return list(temp_map.values())
+
+
+def wait_for_safe_time():
+    """
+    Перевіряє час. Якщо ми в піковому періоді (:00-:05 або :30-:35),
+    чекає до моменту безпечного запуску.
+    """
+    while True:
+        now = datetime.now()
+        minute = now.minute
+
+        # Визначаємо небезпечні вікна
+        is_busy_start = (0 <= minute <= 5)
+        is_busy_middle = (30 <= minute <= 35)
+
+        if is_busy_start or is_busy_middle:
+            # Розраховуємо, скільки секунд залишилося до кінця "червоної зони"
+            wait_minutes = 6 - minute if is_busy_start else 36 - minute
+            current_app.logger.info(f"[{now.strftime('%H:%M:%S')}] Peak load time on Space-Track. Waiting {wait_minutes} minutes.")
+            # print(f"[{now.strftime('%H:%M:%S')}] Peak load time on Space-Track. Waiting {wait_minutes} minutes.")
+            flash(f"[{now.strftime('%H:%M:%S')}] Peak load time on Space-Track. Waiting {wait_minutes} minutes.")
+
+            # Чекаємо 30 секунд перед наступною перевіркою, щоб не вантажити CPU
+            time.sleep(30)
+        else:
+            # print(f"[{now.strftime('%H:%M:%S')}] Safe time. Stating query to space-track...")
+            current_app.logger.info(f"[{now.strftime('%H:%M:%S')}] Safe time. Stating query to space-track...")
+            break
+
+
 def update_tle(old_tle, t2):
     if len(old_tle) == 0:
         return True
     try:
         username = os.getenv('ST_USERNAME')
         password = os.getenv('ST_PASSWORD')
+
+        # Викликаємо очікування перед будь-яким зверненням до API
+        wait_for_safe_time()
+
         st = SpaceTrackClient(username, password)
         st.callback = space_track_callback
-        t1 = t2 - timedelta(days=5)
+        # t1 = t2 - timedelta(days=5)
         current_app.logger.info(f"Retrieving TLE for objects {old_tle}")
-        t1s = t1.utc_strftime("%Y-%m-%d")
-        t2s = t2.utc_strftime("%Y-%m-%d")
-        data = st.gp(norad_cat_id=[old_tle], epoch=f'{t1s}--{t2s}', orderby='epoch desc') # JSON
+        # t1s = t1.utc_strftime("%Y-%m-%d")
+        # t2s = t2.utc_strftime("%Y-%m-%d")
+        t_limit = (t2 - timedelta(days=5)).utc_strftime("%Y-%m-%d %H:%M:%S")
+        # data = st.gp(norad_cat_id=old_tle, epoch=f'{t1s}--{t2s}', orderby='epoch desc') # JSON
+
+        data = st.gp(norad_cat_id=old_tle, epoch=f'>{t_limit}')  # JSON
+        # Sort obtained data on our side, less load on space-track
+        data = filter_latest_tle(data) # Маємо чистий список з унікальними ID
 
         for sat in old_tle:
             current_app.logger.info(f"Search TLE for object {sat}")
             tles = [tl for tl in data if tl['NORAD_CAT_ID']==str(sat)]
-            if len(tles) > 1:
+            if len(tles) >= 1:
                 new_list = sorted(tles, key=lambda d: d['EPOCH'], reverse=True)
                 sc = SatForView.get_by_norad(int(sat))
                 sc.tle = new_list[0]['TLE_LINE0'] + '\n' + new_list[0]['TLE_LINE1'] + '\n' + new_list[0]['TLE_LINE2']
@@ -133,9 +191,6 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
         # leave only selected Satellites
         sats = [sat for sat in sats if str(sat.norad) in selected_sat]
 
-
-        # TODO: check tle epoch for selected satellites and grab TLE for all old (>3 days) & write TLE to DB
-        #       To make function calc faster
         old_tle = []
         for sat in sats:
             if sat.tle == '' or sat.tle is None:
