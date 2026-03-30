@@ -172,7 +172,7 @@ def process_lc_file(file, file_ext, db, app):
                 if line[:9] == "COSPAR ID":
                     cospar = line.split("=")[1].strip().strip("\n").strip("\r")
                 if line[:8] == "NORAD ID":
-                    norad = int(line.split("=")[1].strip())
+                    norad = line.split("=")[1].strip()
                 if line[:4] == "NAME":
                     name = line.split("=")[1].strip().strip("\n").strip("\r")
                     if name[:2] == "0 ":
@@ -251,7 +251,7 @@ def process_lc_file(file, file_ext, db, app):
                 if l[0] == "# COSPAR":
                     cospar = l[1].strip("\n").strip("\r")
                 if l[0] == "# NORAD ":
-                    norad = int(l[1])
+                    norad = l[1].strip()
                 if l[0] == "# NAME  ":
                     name = l[1].strip("\n").strip("\r")
                     if name[:2] == "0 ":

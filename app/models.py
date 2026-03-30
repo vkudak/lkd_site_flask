@@ -211,7 +211,7 @@ class Observation(db.Model):
 class Satellite(db.Model):
     """ Additional clas to lightcurve class"""
     id = db.Column(db.Integer, primary_key=True)
-    norad = db.Column(db.Integer, nullable=False)
+    norad = db.Column(db.String(15), nullable=False)
     cospar = db.Column(db.String(15), nullable=False)
     name = db.Column(db.String(35), nullable=False)
     updated = db.Column(db.DateTime, nullable=True)

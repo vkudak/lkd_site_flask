@@ -139,17 +139,17 @@ def update_tle(old_tle, t2):
         # Sort obtained data on our side, less load on space-track
         data = filter_latest_tle(data) # Маємо чистий список з унікальними ID
 
-        for sat in old_tle:
-            current_app.logger.info(f"Search TLE for object {sat}")
-            tles = [tl for tl in data if tl['NORAD_CAT_ID']==str(sat)]
+        for nor in old_tle:
+            current_app.logger.info(f"Search TLE for object {nor}")
+            tles = [tl for tl in data if tl['NORAD_CAT_ID']==str(nor)]
             if len(tles) >= 1:
                 new_list = sorted(tles, key=lambda d: d['EPOCH'], reverse=True)
-                sc = SatForView.get_by_norad(int(sat))
+                sc = SatForView.get_by_norad(str(nor))
                 sc.tle = new_list[0]['TLE_LINE0'] + '\n' + new_list[0]['TLE_LINE1'] + '\n' + new_list[0]['TLE_LINE2']
                 db.session.commit()
-                current_app.logger.info(f"TLE for object {sat} updated, TLE epoch {new_list[0]['EPOCH']}")
+                current_app.logger.info(f"TLE for object {nor} updated, TLE epoch {new_list[0]['EPOCH']}")
             else:
-                current_app.logger.info(f"No TLE for object {sat}. Keeping old TLE.")
+                current_app.logger.info(f"No TLE for object {nor}. Keeping old TLE.")
         return True
 
     except Exception as e:
@@ -263,11 +263,11 @@ def sat_select():
         return redirect(url_for('home.index'))
 
 
-@sat_view_bp.route('/sat_pas/delete_satellite/<int:norad>', methods=['POST'])
+@sat_view_bp.route('/sat_pas/delete_satellite/<string:norad>', methods=['POST'])
 def delete_satellite(norad):
     """
     Delete Sat_View from DataBase by norad number
-    norad: int
+    norad: str
     """
     satellite = SatForView.query.filter_by(norad=norad).first()
     if satellite:
@@ -294,7 +294,7 @@ def add_satellite():
         current_app.logger.error(f"Cant add sat. Satellite with NORAD={norad} or COSPAR={cospar} already exist.")
         return redirect(url_for('sat_view.sat_select'))
 
-    new_satellite = SatForView(norad=int(norad), cospar=cospar, name='', priority=int(priority))
+    new_satellite = SatForView(norad=norad, cospar=cospar, name='', priority=int(priority))
     db.session.add(new_satellite)
     db.session.commit()
     flash(f"Satellite {norad} added successfully.", "success")
