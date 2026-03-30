@@ -478,7 +478,7 @@ class SatForView(db.Model):
     """ Class for sat view section. Not connected to other classes """
     __tablename__ = 'sat_for_view'
     id = db.Column(db.Integer, primary_key=True)
-    norad = db.Column(db.Integer, nullable=False, unique=True)
+    norad = db.Column(db.String(15), nullable=False, unique=True)
     cospar = db.Column(db.String(15), nullable=False, unique=True)
     name = db.Column(db.String(35), nullable=False, default='')
     priority = db.Column(db.Integer, nullable=False, default=0)
