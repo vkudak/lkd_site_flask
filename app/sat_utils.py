@@ -2,7 +2,7 @@ import io
 import os
 import shutil
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import time
 import traceback
 
@@ -65,7 +65,7 @@ def add_lc(db, sat_id, band,
            flux, mag,
            site,
            az, el, rg, flux_err=None, mag_err=None,
-           tle=None):
+           tle=None, omm=None):
     # check if we already have such LC
     sat = Satellite.get_by_id(id=sat_id)
     # print("     Start processing...")
@@ -92,10 +92,12 @@ def add_lc(db, sat_id, band,
                             site=site)
             if tle is not None:
                 lc.tle = tle
+            if omm is not None:
+                lc.omm = omm
 
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = datetime.utcnow()  # lc.ut_start
+            sat.updated = datetime.now(timezone.utc)  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
 
@@ -112,9 +114,11 @@ def add_lc(db, sat_id, band,
                             site=site)
             if tle is not None:
                 lc.tle = tle
+            if omm is not None:
+                lc.omm = omm
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = datetime.utcnow()  # lc.ut_start
+            sat.updated = datetime.now(timezone.utc)  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
 
@@ -131,9 +135,11 @@ def add_lc(db, sat_id, band,
                             site=site)
             if tle is not None:
                 lc.tle = tle
+            if omm is not None:
+                lc.omm = omm
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = datetime.utcnow()  # lc.ut_start
+            sat.updated = datetime.now(timezone.utc)  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
 
@@ -150,9 +156,11 @@ def add_lc(db, sat_id, band,
                             site=site)
             if tle is not None:
                 lc.tle = tle
+            if omm is not None:
+                lc.omm = omm
             lc.lsp_period = lsp_calc(lc=lc)
             db.session.add(lc)
-            sat.updated = datetime.utcnow()  # lc.ut_start
+            sat.updated = datetime.now(timezone.utc)  # lc.ut_start
             db.session.add(sat)
             db.session.commit()
             # print(f"commit with {band} and {lc_st}")
@@ -1232,6 +1240,9 @@ def lc_to_file(lc_id):
         txt = f"# TLE:\n"
         for line in lc.tle.strip("\n").split("\n"):
             txt += f"# {line}\n"
+    if lc.omm is not None:
+        txt += f"# OMM: {lc.omm}\n"
+
     txt += f"# {lc.ut_start}\n# {lc.ut_end}\n"
     txt += f"# dt = {lc.dt}\n"
     txt += f"# COSPAR = {lc.sat.cospar}\n# NORAD  = {lc.sat.norad}\n# NAME   = {lc.sat.name}\n"

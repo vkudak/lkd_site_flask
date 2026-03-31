@@ -17,8 +17,9 @@ from flask import current_app
 
 from spacetrack import SpaceTrackClient
 from skyfield.iokit import parse_tle_file
-from skyfield.api import load
+from skyfield.api import load, EarthSatellite
 from io import BytesIO
+import json
 
 
 db = SQLAlchemy()
@@ -331,6 +332,7 @@ class Lightcurve(db.Model):
     #  https://stackoverflow.com/questions/30142881/many-to-one-flask-sqlalchemy-rendering
 
     tle = db.Column(db.Text)  # TLE strings 0,1,2 with \n
+    omm = db.Column(db.Text)  # OMM as text (can be JSON or XML)
     ut_start = db.Column(db.DateTime, nullable=False)
     ut_end = db.Column(db.DateTime, nullable=False)
     dt = db.Column(db.Float, nullable=False)
@@ -483,6 +485,7 @@ class SatForView(db.Model):
     name = db.Column(db.String(35), nullable=False, default='')
     priority = db.Column(db.Integer, nullable=False, default=0)
     tle = db.Column(db.Text)
+    omm = db.Column(db.Text) # OMM as text (can be JSON or XML)
 
     @classmethod
     def get_all(cls):
@@ -557,9 +560,18 @@ class SatForView(db.Model):
         earth = eph['Earth']
         moon = eph['Moon']
         sun = eph['Sun']
-        f = BytesIO(str.encode(self.tle))
-        sat = list(parse_tle_file(f, ts))
-        sat = sat[0]
+
+        if self.omm is not None:
+            f = BytesIO(str.encode(self.omm))
+            sat = EarthSatellite.from_omm(ts, json.load(f)) # OMM as JSON
+            # TODO: check if it is XML ???
+        elif self.tle is not None:
+            f = BytesIO(str.encode(self.tle))
+            sat = list(parse_tle_file(f, ts))
+            sat = sat[0]
+        else:
+            return [], f'No TLE for object {self.norad}'
+
         if self.name == '' or self.name == 'None' or self.cospar == '' or self.cospar == 'None':
             self.name = sat.name
             self.cospar = sat.model.intldesg

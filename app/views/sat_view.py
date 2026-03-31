@@ -26,6 +26,7 @@ from skyfield.api import N, S, E, W, load, wgs84, utc, EarthSatellite
 from datetime import datetime, timedelta
 from skyfield.iokit import parse_tle_file
 from io import BytesIO
+import  json
 
 
 from app import cache
@@ -116,8 +117,17 @@ def wait_for_safe_time():
             break
 
 
-def update_tle(old_tle, t2):
-    if len(old_tle) == 0:
+def update_tle(nor_list, t2):
+    """
+    Takes list of norad numbers with old TLE or OMM data
+    Parameters:
+        nor_list: list of NORAD numbers
+        t2: needed epoch (usually today)
+    Returns:
+         True: Updates data in DB if needed
+         False: exception happen, see logs.
+    """
+    if len(nor_list) == 0:
         return True
     try:
         username = os.getenv('ST_USERNAME')
@@ -129,17 +139,18 @@ def update_tle(old_tle, t2):
         st = SpaceTrackClient(username, password)
         st.callback = space_track_callback
         # t1 = t2 - timedelta(days=5)
-        current_app.logger.info(f"Retrieving TLE for objects {old_tle}")
+        current_app.logger.info(f"Retrieving TLE for objects {nor_list}")
         # t1s = t1.utc_strftime("%Y-%m-%d")
         # t2s = t2.utc_strftime("%Y-%m-%d")
         t_limit = (t2 - timedelta(days=5)).utc_strftime("%Y-%m-%d %H:%M:%S")
         # data = st.gp(norad_cat_id=old_tle, epoch=f'{t1s}--{t2s}', orderby='epoch desc') # JSON
 
-        data = st.gp(norad_cat_id=old_tle, epoch=f'>{t_limit}')  # JSON
+        # TODO change TLE to OMM. dont use TLE !!!
+        data = st.gp(norad_cat_id=nor_list, epoch=f'>{t_limit}')  # JSON
         # Sort obtained data on our side, less load on space-track
         data = filter_latest_tle(data) # Маємо чистий список з унікальними ID
 
-        for nor in old_tle:
+        for nor in nor_list:
             current_app.logger.info(f"Search TLE for object {nor}")
             tles = [tl for tl in data if tl['NORAD_CAT_ID']==str(nor)]
             if len(tles) >= 1:
@@ -193,18 +204,29 @@ def sat_passes(): #site, date_start, sat_selected, min_sat_h):
 
         old_tle = []
         for sat in sats:
-            if sat.tle == '' or sat.tle is None:
+            if (sat.tle == '') or (sat.tle is None) and (sat.omm is None):
                 old_tle.append(sat.norad)
             else:
-                # check TLE epoch
-                f = BytesIO(str.encode(sat.tle))
-                ts = load.timescale()
-                m_sat = list(parse_tle_file(f, ts))
-                if m_sat:
-                    m_sat_epoch = m_sat[0].epoch
-                    if abs(m_sat_epoch - t0) > 3:
-                        old_tle.append(sat.norad)
+                if sat.tle is not None:
+                    # check TLE epoch
+                    f = BytesIO(str.encode(sat.tle))
+                    ts = load.timescale()
+                    m_sat = list(parse_tle_file(f, ts))
+                    if m_sat:
+                        m_sat_epoch = m_sat[0].epoch
+                        if abs(m_sat_epoch - t0) > 3:
+                            old_tle.append(sat.norad)
+                if sat.omm is not None:
+                    f = BytesIO(str.encode(sat.omm))
+                    ts = load.timescale()
+                    m_sat = EarthSatellite.from_omm(ts, json.load(f))  # OMM as JSON
+                    if m_sat:
+                        # TODO: check if OMM has epoch
+                        m_sat_epoch = m_sat.epoch
+                        if abs(m_sat_epoch - t0) > 3:
+                            old_tle.append(sat.norad)
 
+        # TODO: rewrite to OMM or keep as it is....
         # Update all old TLEs
         if update_tle(old_tle, t0):
             passes = []
