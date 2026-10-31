@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import traceback
 
 from bokeh.layouts import gridplot
-from bokeh.models import DatetimeTickFormatter, Text, HoverTool, Scatter, Title, ColumnDataSource, Whisker, TeeHead
+from bokeh.models import DatetimeTickFormatter, Text, HoverTool, Scatter, Title, ColumnDataSource, Whisker, TeeHead, SaveTool
 from bokeh.plotting import figure
 from bokeh.resources import CDN
 from bokeh.embed import file_html
@@ -395,7 +395,7 @@ def plot_lc_bokeh(lc_id):
 
     # source = ColumnDataSource(data=dict(base=lc.date_time, mag=lc.mag))
 
-    tools = 'pan,wheel_zoom,box_zoom,reset,save'
+    tools = 'pan,wheel_zoom,box_zoom,reset'
     title = f"Satellite Name:{lc.sat.name}, NORAD:{lc.sat.norad}, COSPAR:{lc.sat.cospar}" + ", " + \
             "\n" + \
             f"LC start={lc.ut_start}  dt={dt}  Filter={lc.band} Observatory={lc.site}"
@@ -410,7 +410,8 @@ def plot_lc_bokeh(lc_id):
                   tools=tools
                   )
 
-    plot.output_backend = "svg"
+    plot.output_backend = "canvas"
+    plot.add_tools(SaveTool(filename=f"lightcurve_{lc_id}.png"))
     plot.title.align = 'center'
     # plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
     # https://www.geeksforgeeks.org/how-to-print-superscript-and-subscript-in-python/
@@ -488,7 +489,7 @@ def plot_lc_bokeh(lc_id):
 
     p2 = figure(height=150, width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p2.output_backend = "svg"
+    p2.output_backend = "canvas"
     p2.yaxis.axis_label = r"elevation [deg]"
     p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
     p2.xaxis.ticker.desired_num_ticks = 10
@@ -499,7 +500,7 @@ def plot_lc_bokeh(lc_id):
 
     p3 = figure(height=150, width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p3.output_backend = "svg"
+    p3.output_backend = "canvas"
     p3.yaxis.axis_label = r"Azimuth [deg]"
     p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
     p3.xaxis.ticker.desired_num_ticks = 10
@@ -507,11 +508,9 @@ def plot_lc_bokeh(lc_id):
                                                minutes="%H:%M:%S",
                                                minsec="%H:%M:%S",
                                                hours="%H:%M:%S")
-    layout = gridplot([[plot], [p2], [p3]], toolbar_options=dict(logo=None))
+    layout = gridplot([[plot], [p2], [p3]], merge_tools=False, toolbar_options=dict(logo=None))
 
-    html = file_html(layout, CDN, "LC plot")
-    # html = file_html(plot, CDN, "my plot")
-    return lc, html
+    return lc, layout
 
 
 def plot_lc_multi_bokeh(lc_id):
@@ -526,7 +525,7 @@ def plot_lc_multi_bokeh(lc_id):
     dts = ";".join([str(lc.dt) for lc in lcs])
 
     # dt = str(lc_selected.dt).strip('\n')
-    tools = 'pan,wheel_zoom,box_zoom,reset,save'
+    tools = 'pan,wheel_zoom,box_zoom,reset'
 
     title1 = f"Satellite Name:{lc_selected.sat.name}, NORAD:{lc_selected.sat.norad}, COSPAR:{lc_selected.sat.cospar},"
     title1 = f'{title1:^100}'
@@ -559,7 +558,8 @@ def plot_lc_multi_bokeh(lc_id):
                 tools=tools
                 )
 
-    p1.output_backend = "svg"
+    p1.output_backend = "canvas"
+    p1.add_tools(SaveTool(filename=f"lightcurve_{lc_id}_combined.png"))
     p1.title.align = 'center'
 
     p1.yaxis.axis_label = u'm\u209B\u209c [mag]'  # m_st
@@ -616,7 +616,7 @@ def plot_lc_multi_bokeh(lc_id):
 
     p2 = figure(height=150, width=800, x_range=p1.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p2.output_backend = "svg"
+    p2.output_backend = "canvas"
     p2.yaxis.axis_label = r"elevation [deg]"
     for lc in lcs:
         p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
@@ -628,7 +628,7 @@ def plot_lc_multi_bokeh(lc_id):
 
     p3 = figure(height=150, width=800, x_range=p1.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p3.output_backend = "svg"
+    p3.output_backend = "canvas"
     p3.yaxis.axis_label = r"Azimuth [deg]"
     for lc in lcs:
         p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
@@ -637,11 +637,9 @@ def plot_lc_multi_bokeh(lc_id):
                                                minutes="%H:%M:%S",
                                                minsec="%H:%M:%S",
                                                hours="%H:%M:%S")
-    layout = gridplot([[p1], [p2], [p3]], toolbar_options=dict(logo=None))
+    layout = gridplot([[p1], [p2], [p3]], merge_tools=False, toolbar_options=dict(logo=None))
 
-    html = file_html(layout, CDN, "LC plot")
-    # html = file_html(plot, CDN, "my plot")
-    return lc_selected, html
+    return lc_selected, layout
 
 
 def lsp_calc(lc_id=None, lc=None):

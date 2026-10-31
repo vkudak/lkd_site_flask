@@ -7,6 +7,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, MultipleFileField, SubmitField
 from wtforms.fields.numeric import FloatField
 from wtforms.validators import Length, DataRequired
+from bokeh.embed import components
+from bokeh.resources import CDN
 import datetime
 
 from app import cache
@@ -137,10 +139,14 @@ def sat_lc_plot(lc_id):
     else:
         lc, lc_fig = plot_lc_bokeh(lc_id)
 
+    lc_graph_script, lc_graph_div = components(lc_fig)
     # lsp_fig = lsp_plot_bokeh(lc_id)
     # value = request.form.get('checkbox')
     # print(value)
-    return render_template("sat_lc_details.html", lc=lc, lc_graph=lc_fig)
+    return render_template("sat_lc_details.html", lc=lc,
+                           bokeh_resources=CDN.render(),
+                           lc_graph_script=lc_graph_script,
+                           lc_graph_div=lc_graph_div)
 
 
 @sat_bp.route('/sat_plot_periods.html/<int:sat_id>', methods=['GET', 'POST'])

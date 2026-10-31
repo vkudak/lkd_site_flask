@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
         {% block content %}
                 <div id="post12" style="width:100%; margin-right: auto; margin-left: auto; text-align: center;" >
+                    {{ bokeh_resources | safe }}
                     <br>
                     <h2>Details of Satellite
                         <br>NORAD={{lc.sat.norad}}, COSPAR={{lc.sat.cospar }}, NAME={{lc.sat.name }}
@@ -14,8 +15,9 @@
 {#                    <img class="aligncenter" src="{{ url_for('static', filename=lc_graph).replace('tmp_sat%5C', 'tmp_sat/') }}"#}
 {#                    width="800" height="500" alt="" />#}
                     <div style="width:800px; margin-right: auto; margin-left: auto; border-collapse: collapse;">
-                        {{ lc_graph | safe}}
+                        {{ lc_graph_div | safe }}
                     </div>
+                    {{ lc_graph_script | safe }}
 
                     <br>
 
