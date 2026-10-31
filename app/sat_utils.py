@@ -410,8 +410,8 @@ def plot_lc_bokeh(lc_id):
                   tools=tools
                   )
 
-    plot.output_backend = "canvas"
-    plot.add_tools(SaveTool(filename=f"lightcurve_{lc_id}.png"))
+    plot.output_backend = "svg"
+    plot.add_tools(SaveTool(filename=f"lightcurve_{lc_id}.svg"))
     plot.title.align = 'center'
     # plot.yaxis.axis_label = r"$$\textrm{m}_{st}~\textrm{[mag]}$$"
     # https://www.geeksforgeeks.org/how-to-print-superscript-and-subscript-in-python/
@@ -489,7 +489,7 @@ def plot_lc_bokeh(lc_id):
 
     p2 = figure(height=150, width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p2.output_backend = "canvas"
+    p2.output_backend = "svg"
     p2.yaxis.axis_label = r"elevation [deg]"
     p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
     p2.xaxis.ticker.desired_num_ticks = 10
@@ -500,7 +500,7 @@ def plot_lc_bokeh(lc_id):
 
     p3 = figure(height=150, width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p3.output_backend = "canvas"
+    p3.output_backend = "svg"
     p3.yaxis.axis_label = r"Azimuth [deg]"
     p3.line(lc.date_time, lc.az, color='black', line_width=0.5)
     p3.xaxis.ticker.desired_num_ticks = 10
@@ -558,8 +558,8 @@ def plot_lc_multi_bokeh(lc_id):
                 tools=tools
                 )
 
-    p1.output_backend = "canvas"
-    p1.add_tools(SaveTool(filename=f"lightcurve_{lc_id}_combined.png"))
+    p1.output_backend = "svg"
+    p1.add_tools(SaveTool(filename=f"lightcurve_{lc_id}_combined.svg"))
     p1.title.align = 'center'
 
     p1.yaxis.axis_label = u'm\u209B\u209c [mag]'  # m_st
@@ -616,7 +616,7 @@ def plot_lc_multi_bokeh(lc_id):
 
     p2 = figure(height=150, width=800, x_range=p1.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p2.output_backend = "canvas"
+    p2.output_backend = "svg"
     p2.yaxis.axis_label = r"elevation [deg]"
     for lc in lcs:
         p2.line(lc.date_time, lc.el, color='black', line_width=0.5)
@@ -628,7 +628,7 @@ def plot_lc_multi_bokeh(lc_id):
 
     p3 = figure(height=150, width=800, x_range=p1.x_range,
                 y_axis_location="left", x_axis_type='datetime')
-    p3.output_backend = "canvas"
+    p3.output_backend = "svg"
     p3.yaxis.axis_label = r"Azimuth [deg]"
     for lc in lcs:
         p3.line(lc.date_time, lc.az, color='black', line_width=0.5)

@@ -8,3 +8,5 @@ __pycache__/
 /app/static/tmp/*.*
 /app/test.db
 /AGENTS.md
+instance/test.db
+coverage.json

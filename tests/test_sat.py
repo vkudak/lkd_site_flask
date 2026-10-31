@@ -78,7 +78,7 @@ def test_sat_all(client, auth):
     assert response.status_code == 200
     assert b"LC start time =" in response.data
     assert response.data.count(b"</html>") == 1
-    assert f"lightcurve_{lc.id}.png".encode() in response.data
+    assert f"lightcurve_{lc.id}.svg".encode() in response.data
 
     # check LSP details
     response = client.get(f"/sat_lc_period_plot.html/{lc.id}")
