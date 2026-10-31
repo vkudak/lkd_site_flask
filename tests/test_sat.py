@@ -1,5 +1,7 @@
 from werkzeug.datastructures import FileStorage
 from datetime import datetime
+from io import BytesIO
+from zipfile import ZipFile
 from tests.conftest import client
 import matplotlib
 matplotlib.use("Agg")
@@ -53,6 +55,19 @@ def test_sat_all(client, auth):
     assert response.status_code == 200
     assert response.mimetype == "text/csv"
     assert response.headers["Content-Disposition"].startswith("attachment;")
+
+    response = client.get(f"/api/lightcurves/{lc.id}")
+    assert response.status_code == 200
+    assert response.mimetype == "text/csv"
+    assert response.data == client.get(f"/sat_download_lc.html/{lc.id}").data
+
+    for identifier_type, identifier in (("norad", sat.norad), ("cospar", sat.cospar)):
+        response = client.get(f"/api/lightcurves/{identifier_type}/{identifier}")
+        assert response.status_code == 200
+        assert response.mimetype == "application/zip"
+        with ZipFile(BytesIO(response.data)) as archive:
+            assert len(archive.namelist()) == sat.count_lcs()
+            assert b"# NORAD" in archive.read(archive.namelist()[0])
 
     response = client.get(f"/sat_details.html/{sat.id}")
     assert response.status_code == 200

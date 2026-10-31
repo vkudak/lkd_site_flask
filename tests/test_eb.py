@@ -15,9 +15,9 @@ def test_eb_list_access_denied(client,auth):
     create_super_user(eb_access=False)
     auth.login("super_user", "user_pass")  # Імітація входу
 
-    response = client.get("/eb_list.html")
-    assert response.status_code == 302  # Перевіряємо, що користувача редіректить
-    assert b"User has no rights for EB section" in response.data  # Flash повідомлення
+    response = client.get("/eb_list.html", follow_redirects=True)
+    assert response.status_code == 200
+    assert b"User has no rights for EB section" in response.data
 
 def test_eb_list_login_required(client):
     response = client.get("/eb_list.html", follow_redirects=False)

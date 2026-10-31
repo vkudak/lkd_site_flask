@@ -75,7 +75,7 @@ def eb_list():
             return render_template('eb_list.html', user=current_user, eb_form=eb_form)
     else:
         flash("User has no rights for EB section. Contact admin please.")
-        return redirect(render_template('eb_phot.html'))
+        return redirect(url_for("eb.eb_phot"))
 
 
 @eb_bp.route('/details.html/<star_id>', methods=['GET', 'POST'])

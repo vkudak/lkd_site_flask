@@ -5,3 +5,4 @@
 /app/static/tmp_sat/*.*
 /app/static/tmp/*.*
 /app/test.db
+/AGENTS.md

@@ -27,7 +27,9 @@ api = Api(api_bp, doc="/docs",
 # Import API namespaces
 from .users import api as users_ns
 from .auth import api as auth_ns
+from .lightcurves import api as lightcurves_ns
 
 # Register namespaces
 api.add_namespace(users_ns, path="/users")
 api.add_namespace(auth_ns, path="/auth")
+api.add_namespace(lightcurves_ns, path="/lightcurves")
