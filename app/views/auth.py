@@ -1,8 +1,8 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, session, request
+from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FloatField, SubmitField
-from wtforms.validators import InputRequired, Length, ValidationError, NumberRange
-from flask_login import LoginManager, UserMixin, login_required, login_user, logout_user, current_user
+from wtforms.validators import InputRequired, Length, NumberRange
+from flask_login import login_required, login_user, logout_user, current_user
 
 
 from app import bcrypt
@@ -10,12 +10,6 @@ from app.models import User, db
 
 
 auth_bp = Blueprint('auth', __name__)
-
-
-def validate_username(username):
-    existing_username = User.query.filter_by(username=username.data).first()
-    if existing_username:
-        raise ValidationError("Such user already exists")
 
 
 class RegisterForm(FlaskForm):
@@ -85,7 +79,7 @@ def login():
 @auth_bp.route("/logout", methods=["GET", "POST"])
 @login_required
 def logout():
-    user = User.query.get(int(current_user.id))
+    user = db.session.get(User, int(current_user.id))
     if logout_user():
         current_app.logger.info('User with username <%s> is logged out', user.username)
     # return render_template("index.html")

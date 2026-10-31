@@ -1,7 +1,6 @@
 from flask import request
 from flask_login import login_required, current_user
 from flask_restx import Namespace, Resource, fields
-from werkzeug.exceptions import Unauthorized
 
 from app import bcrypt
 from app.models import db

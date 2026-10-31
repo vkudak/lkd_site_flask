@@ -10,6 +10,7 @@ from alembic import context
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+db = current_app.extensions['migrate'].db
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -22,9 +23,9 @@ logger = logging.getLogger('alembic.env')
 # target_metadata = mymodel.Base.metadata
 config.set_main_option(
     'sqlalchemy.url',
-    str(current_app.extensions['migrate'].db.get_engine().url).replace(
+    str(db.engine.url).replace(
         '%', '%%'))
-target_metadata = current_app.extensions['migrate'].db.metadata
+target_metadata = db.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -71,7 +72,7 @@ def run_migrations_online():
                 directives[:] = []
                 logger.info('No changes in schema detected.')
 
-    connectable = current_app.extensions['migrate'].db.get_engine()
+    connectable = db.engine
 
     with connectable.connect() as connection:
         context.configure(

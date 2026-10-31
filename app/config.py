@@ -1,4 +1,3 @@
-from datetime import timedelta
 from os import environ, path
 from dotenv import load_dotenv
 

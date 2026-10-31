@@ -3,7 +3,6 @@ import functools
 from scipy.signal import find_peaks
 from scipy import stats
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.svm import SVR
 
 
 

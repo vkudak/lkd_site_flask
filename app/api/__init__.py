@@ -1,6 +1,5 @@
 from flask_restx import Api
-from flask import Blueprint, jsonify
-from werkzeug.exceptions import Unauthorized
+from flask import Blueprint
 
 # Create a Blueprint
 api_bp = Blueprint("api", __name__, url_prefix="/api")

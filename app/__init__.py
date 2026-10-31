@@ -19,13 +19,6 @@ cors = CORS()
 cache = Cache()
 
 
-def setup_database(app, db):
-    with app.app_context():
-        @app.before_first_request
-        def create_tables():
-            db.create_all()
-
-
 def create_app():
     app = Flask(__name__)
     # CONFIG_TYPE = os.getenv('CONFIG_TYPE', default='app.config.DevConfig')
@@ -59,7 +52,7 @@ def create_app():
         from app.models import db
         db.init_app(app)
         migrate.init_app(app, db)
-        setup_database(app, db)
+        db.create_all()
         # https://flask-migrate.readthedocs.io/en/latest/
 
         login_manager.init_app(app)
@@ -68,9 +61,7 @@ def create_app():
 
         @login_manager.user_loader
         def load_user(user_id):
-            # return User.query.get(int(user_id))
-            user = User.query.get(int(user_id))
-            # user = User.query.filter_by(id=int(user_id)).first()
+            user = db.session.get(User, int(user_id))
             if user:
                 # print(user.username)
                 app.logger.info("Load User with username <%s>", user.username)
@@ -134,9 +125,6 @@ def create_app():
                        )
 
     # https://trstringer.com/logging-flask-gunicorn-the-manageable-way/
-    import logging
-    from flask.logging import default_handler
-
     # # Deactivate the default flask logger so that log messages don't get duplicated
     # app.logger.removeHandler(default_handler)
     #

@@ -1,11 +1,8 @@
-import os
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
-from skyfield import almanac
-from sqlalchemy import and_
+from sqlalchemy import CheckConstraint, and_, text
 
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
 import ephem
 from scipy.signal import find_peaks
 from astropy.timeseries import LombScargle
@@ -15,7 +12,6 @@ from app.period.find_period import find_period
 from app.star_util import t2phases, phase2str
 from flask import current_app
 
-from spacetrack import SpaceTrackClient
 from skyfield.iokit import parse_tle_file
 from skyfield.api import load, EarthSatellite
 from io import BytesIO
@@ -100,14 +96,6 @@ class Star(db.Model):
         obs = Observation(start_date=start_date, end_date=end_date, star_id=self.id)
         db.session.add(obs)
         db.session.commit()
-
-    @classmethod
-    def return_all(cls):
-        """
-        Return all Stars
-        """
-        stars = db.session.query(cls).order_by(cls.done).all()
-        return stars
 
     @classmethod
     def delete_by_id(cls, id):
@@ -323,6 +311,13 @@ class Satellite(db.Model):
 
 
 class Lightcurve(db.Model):
+    __table_args__ = (
+        CheckConstraint(
+            "status_prob >= 0 AND status_prob <= 100",
+            name="ck_lightcurve_status_prob_range",
+        ),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     # sat_id = db.Column(db.Integer, db.ForeignKey('satellite.id'))
 
@@ -351,6 +346,11 @@ class Lightcurve(db.Model):
 
     site = db.Column(db.String(50), nullable=True)
     lsp_period = db.Column(db.Float, nullable=True)
+    
+    stable_status = db.Column(db.Boolean, nullable=True)
+    status_prob = db.Column(
+        db.Float, nullable=False, default=0.0, server_default=text("0")
+    )
 
     @classmethod
     def get_by_lc_start(cls, norad, ut_start, bands=False):
@@ -531,17 +531,6 @@ class SatForView(db.Model):
     #         return False
     #
     #     return True
-
-    def get_tle_epoch(self):
-        if self.tle == '' or self.tle is None:
-            ts = load.timescale()
-            return ts.tt(2000, 1, 1, 12, 0)
-        else:
-            f = BytesIO(str.encode(self.tle))
-            ts = load.timescale()
-            sat = list(parse_tle_file(f, ts))
-            sat = sat[0]
-            return sat.epoch
 
     def calc_passes(self, site, t1, t2, min_h=20):
         # if TLE are 3 days old then get new TLE

@@ -4,9 +4,8 @@ from flask import Blueprint, render_template, redirect, url_for, request, flash,
 from flask import send_file
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from pycparser.c_ast import Default
-from wtforms import StringField, MultipleFileField, SubmitField, RadioField, IntegerField
-from wtforms.fields.numeric import DecimalField, FloatField
+from wtforms import StringField, MultipleFileField, SubmitField
+from wtforms.fields.numeric import FloatField
 from wtforms.validators import Length, DataRequired
 import datetime
 
@@ -14,9 +13,6 @@ from app import cache
 from app.models import Satellite, db, Lightcurve
 from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc, \
     lc_to_file, plot_periods_bokeh
-
-# FOR PATCH case
-from app.sat_utils import lsp_calc, calc_period_for_all_lc, calc_sat_updated_for_all_sat
 
 sat_bp = Blueprint('sat', __name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -53,14 +49,6 @@ def generate_report(date_from, date_to):
 @sat_bp.route('/sat_phot.html', methods=['GET', 'POST'])
 @login_required
 def sat_phot():
-    # PATCH LC without calculated Period
-    # Uncomment to recalc ALL LCs period  (about 10-30 min procedure !)
-    # print("patching LCs periods. This will take some time ...")
-    # calc_period_for_all_lc()
-
-    # PATCH add updated time to each satellite record
-    # calc_sat_updated_for_all_sat()
-
     if current_user.sat_access:
         lc_form = AddLcForm()
 
@@ -178,7 +166,7 @@ def sat_lc_period_plot(lc_id):
         else:
             per_form.per_input.data = 0.0 # if period is None
 
-        lsp_fig, lc, p = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True)
+        lsp_fig, lc, _ = lsp_plot_bokeh(lc_id, return_lc=True, return_period=True)
         phased_fig = plot_phased_lc(lc, lc.lsp_period)
         return render_template("sat_lc_lsp_details.html", lc=lc,
                                lsp_graph=lsp_fig, ph_graph=phased_fig, user=current_user, per_form=per_form)

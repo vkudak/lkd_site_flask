@@ -1,38 +1,22 @@
 import os
-import sys
 import time
-from operator import itemgetter
 
-import numpy as np
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, jsonify, Response, \
-    render_template_string
-from flask import send_file
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, render_template_string
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
-from pycparser.c_ast import Default
-from skyfield.timelib import Timescale
-from wtforms import StringField, MultipleFileField, SubmitField, RadioField, IntegerField
-from wtforms.fields.numeric import DecimalField, FloatField
-from wtforms.validators import Length, DataRequired
-from flask_wtf import FlaskForm
-from wtforms import DateField, IntegerField, SelectField, SubmitField
+from wtforms import IntegerField, SubmitField, DateField, SelectField
 from wtforms.validators import DataRequired
 
 from spacetrack import SpaceTrackClient
-from skyfield.earthlib import refraction
 from skyfield import almanac
-from skyfield.units import Angle
-from skyfield.api import N, S, E, W, load, wgs84, utc, EarthSatellite
+from skyfield.api import load, wgs84, utc, EarthSatellite
 from datetime import datetime, timedelta
 from skyfield.iokit import parse_tle_file
 from io import BytesIO
-import  json
+import json
 
 
-from app import cache
-from app.models import Satellite, db, Lightcurve, SatForView, User
-from app.sat_utils import plot_lc_bokeh, process_lc_file, lsp_plot_bokeh, plot_lc_multi_bokeh, plot_phased_lc, \
-    lc_to_file, plot_periods_bokeh
+from app.models import db, SatForView, User
 
 sat_view_bp = Blueprint('sat_view', __name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -59,8 +43,8 @@ def calc_t_twilight(site, date=None, h_sun=-12):
     t0 = ts.from_datetime(midnight)
     t1 = ts.from_datetime(next_midnight)
 
-    t_set, y = almanac.find_settings(observer, eph['Sun'], t0, t1, horizon_degrees=h_sun)
-    t_rise, y = almanac.find_risings(observer, eph['Sun'], t0, t1, horizon_degrees=h_sun)
+    t_set, _ = almanac.find_settings(observer, eph['Sun'], t0, t1, horizon_degrees=h_sun)
+    t_rise, _ = almanac.find_risings(observer, eph['Sun'], t0, t1, horizon_degrees=h_sun)
     return t_set[0], t_rise[1]
 
 

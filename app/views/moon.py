@@ -62,7 +62,6 @@ def get_planet_elevations(days=16):
 
     # Set time zone offset for Kyiv (UTC+3)
     kiev_tz = pytz.timezone('Europe/Kiev')
-    today = datetime.now(tz=kiev_tz)
     planets_elevations = []
     for i in range(days):
         date = datetime.now(tz=kiev_tz) + timedelta(days=i)

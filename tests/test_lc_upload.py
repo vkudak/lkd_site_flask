@@ -1,6 +1,4 @@
 from app.models import User, Lightcurve, db
-import io
-import os
 from datetime import datetime
 from werkzeug.datastructures import FileStorage
 import logging

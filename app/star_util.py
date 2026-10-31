@@ -1,10 +1,8 @@
-import csv
 import os
 import ephem
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 import math
-import json
 
 from bokeh.layouts import gridplot
 from bokeh.models import DatetimeTickFormatter, HoverTool, LinearAxis, Range1d
@@ -84,211 +82,6 @@ def t2phases(dt, P0, E0):
         ph = np.mod(x - E0, P0) / float(P0)  # phase
         aph.append(ph)
     return aph
-
-
-def read_stars(filename, gcvs_filename, user):
-    stars = []
-    site = ephem.Observer()
-    today = datetime.today()
-    site.date = datetime(today.year, today.month, today.day, 23, 59, 0)  # datetime.now()
-    site.lat = str(user.site_lat)  # "48.63" #loc.lat
-    site.lon = str(user.site_lon)  # "22.33" #loc.lon
-    site.horizon = '25'
-    with open(filename, newline='') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            row["Done"] = row["Done"].strip()
-            if row["Done"] == "":
-                row["Done"] = False
-            else:
-                row["Done"] = True
-
-            row["Name"] = ' '.join(row["Name"].split())
-            row["Epoch"] = row["Epoch"].strip()
-            if row["Phase"].strip() != "":
-                row["Phase"] = row["Phase"].strip()
-                row["Phase"] = [tuple(x.split(":")) for x in row["Phase"].split(";")]
-                row["Phase"] = [(x, y.strip('][').split(',')) for x, y in row["Phase"]]
-                row["Phase"] = [(x, [float(z) for z in y]) for x,y in row["Phase"]]
-                row["Phase"] = [(x, y, phase2str(y)) for x, y in row["Phase"]]
-            else:
-                row["Phase"] = ""
-
-            if row["Period"] == "None":
-                with open(gcvs_filename) as gf:
-                    for line in gf:
-                        if line[0] != "#":
-                            l = line.split("|")
-                            cat_Name = l[0].strip()
-                            # cat_Name = ' '.join(cat_Name.split())
-                            if cat_Name == row["Name"].strip():
-                                ra = l[2]
-                                dec = l[3]
-                                mag = l[5]
-                                row["Mag"] = mag
-                                row["RA"] = ra[0:2] + "h" + ra[3:5] + "m" + ra[6:] + "s"
-                                row["DEC"] = dec[:3] + "d" + dec[4:6] + "m" + dec[7:] + "s"
-                                row["Period"] = float(l[7])
-                                if row["Epoch"].strip() == "None":
-                                    row["Epoch"] = float(l[6])
-            # calc hours above horizon
-            obj = ephem.FixedBody()
-            obj.name = row["Name"]
-            obj._ra = ephem.hours(row["RA"].replace("h", ":").replace("m", ":")[:-1])
-            obj._dec = ephem.degrees(row["DEC"].replace("d", ":").replace("m", ":")[:-1])
-            obj.compute(site)
-            # print(obj.name, obj._ra, obj._dec, obj.alt, obj.az)
-            try:
-                rise = site.previous_rising(obj)
-                pas = site.next_setting(obj)
-                row["Rise"] = str(rise).replace("/", "-")
-                row["Pass"] = str(pas).replace("/", "-")
-                row["sort_date"] = datetime.strptime(row['Rise'], "%Y-%m-%d %H:%M:%S").timestamp()
-            except ephem.AlwaysUpError:
-                row["Rise"] = "alw up"
-                row["Pass"] = "alw up"
-                row["sort_date"] = (datetime.now() + timedelta(days=10)).timestamp()
-            ##
-            stars.append(row)
-    # stars is list of dict [{.star_rec with keys..},{...}, {...}]
-
-    stars = sorted(stars, key=lambda k: (float(k['Mag']), k["sort_date"]))
-    # return sorted(stars, key=lambda k: k['Mag'])
-    return stars
-
-
-def read_stars_json(filename, gcvs_filename, user):
-    stars = []
-    site = ephem.Observer()
-    today = datetime.today()
-    site.date = datetime(today.year, today.month, today.day, 23, 59, 0)  # datetime.now()
-    site.lat = str(user.site_lat)  # "48.63" #loc.lat
-    site.lon = str(user.site_lon)  # "22.33" #loc.lon
-    site.horizon = '25'
-    with open(filename) as json_file:
-        data = json.load(json_file)
-        for row in data:
-            row["Name"] = ' '.join(row["Name"].split())
-
-            if not row["Period"]:  # == None
-                with open(gcvs_filename) as gf:
-                    for line in gf:
-                        if line[0] != "#":
-                            l = line.split("|")
-                            cat_Name = l[0].strip()
-                            if cat_Name == row["Name"].strip():
-                                ra = l[2]
-                                dec = l[3]
-                                mag = l[5]
-                                row["Mag"] = mag
-                                row["RA"] = ra[0:2] + "h" + ra[3:5] + "m" + ra[6:] + "s"
-                                row["DEC"] = dec[:3] + "d" + dec[4:6] + "m" + dec[7:] + "s"
-                                row["Period"] = float(l[7])
-                                if row["Epoch"] is None:
-                                    row["Epoch"] = float(l[6])
-            # calc hours above horizon
-            obj = ephem.FixedBody()
-            obj.name = row["Name"]
-            obj._ra = ephem.hours(row["RA"].replace("h", ":").replace("m", ":")[:-1])
-            obj._dec = ephem.degrees(row["DEC"].replace("d", ":").replace("m", ":")[:-1])
-            obj.compute(site)
-            # print(obj.name, obj._ra, obj._dec, obj.alt, obj.az)
-            try:
-                rise = site.previous_rising(obj)
-                pas = site.next_setting(obj)
-                row["Rise"] = str(rise).replace("/", "-")
-                row["Pass"] = str(pas).replace("/", "-")
-                row["sort_date"] = datetime.strptime(row['Rise'], "%Y-%m-%d %H:%M:%S").timestamp()
-            except ephem.AlwaysUpError:
-                row["Rise"] = "alw up"
-                row["Pass"] = "alw up"
-                row["sort_date"] = (datetime.now() + timedelta(days=10)).timestamp()
-            ##
-            if row["Phase"] is not None:
-                row["Phase"] = [tuple(x.split(":")) for x in row["Phase"].split(";")]
-                row["Phase"] = [(x, y.strip('][').split(',')) for x, y in row["Phase"]]
-                row["Phase"] = [(x, [float(z) for z in y]) for x,y in row["Phase"]]
-                row["Phase"] = [(x,
-                                 (t2phases([y[0]], row["Period"], row["Epoch"])[0], t2phases([y[1]], row["Period"], row["Epoch"])[0]),
-                                 y[1] - y[0],
-                                 )
-                                for x, y in row["Phase"]]
-                for i in range(0, len(row["Phase"])):
-                    if row["Phase"][i][2] >= row["Period"]:
-                        row["Phase"][i] = [row["Phase"][i][0], row["Phase"][i][1], "[" + "*"*50 + "]"]
-                    else:
-                        row["Phase"][i] = [row["Phase"][i][0], row["Phase"][i][1], phase2str(row["Phase"][i][1])]
-            else:
-                row["Phase"] = ""
-            stars.append(row)
-    # stars is list of dict [{.star_rec with keys..},{...}, {...}]
-
-    stars = sorted(stars, key=lambda k: (float(k['Mag']), k["sort_date"]))
-    stars = sorted(stars, key=lambda k: (k["Phase"] != ""), reverse=True)
-    stars = sorted(stars, key=lambda k: (k["Done"]))  # Done are last ones
-    # return sorted(stars, key=lambda k: k['Mag'])
-    return stars
-
-
-def read_stars_from_db(user, db_stars):
-    stars = []
-    site = ephem.Observer()
-    today = datetime.today()
-    site.date = datetime(today.year, today.month, today.day, 23, 59, 0)  # datetime.now()
-    site.lat = str(user.site_lat)  # "48.63" #loc.lat
-    site.lon = str(user.site_lon)  # "22.33" #loc.lon
-    site.horizon = '25'
-    for star in db_stars:
-        row = {'Name': star.star_name, 'RA': star.ra, 'DEC': star.dec}
-        # calc hours above horizon
-        obj = ephem.FixedBody()
-        obj.name = star.star_name
-        obj._ra = ephem.hours(star.ra.replace("h", ":").replace("m", ":")[:-1])
-        obj._dec = ephem.degrees(star.dec.replace("d", ":").replace("m", ":")[:-1])
-        obj.compute(site)
-        # print(obj.name, obj._ra, obj._dec, obj.alt, obj.az)
-        try:
-            rise = site.previous_rising(obj)
-            pas = site.next_setting(obj)
-            row["Rise"] = str(rise).replace("/", "-")
-            row["Pass"] = str(pas).replace("/", "-")
-            row["sort_date"] = datetime.strptime(row['Rise'], "%Y-%m-%d %H:%M:%S").timestamp()
-        except ephem.AlwaysUpError:
-            row["Rise"] = "alw up"
-            row["Pass"] = "alw up"
-            row["sort_date"] = (datetime.now() + timedelta(days=10)).timestamp()
-        ##
-        row['Phase'] = star.phase
-        row["Period"] = star.period
-        row["Epoch"] = star.epoch
-        row["Mag"] = star.mag
-        row["Done"] = star.done
-        row["id"] = star.id
-
-        if row["Phase"] is not None:
-            row["Phase"] = [
-                (x,
-                 (t2phases([y[0]], row["Period"], row["Epoch"])[0],
-                  t2phases([y[1]], row["Period"], row["Epoch"])[0]),
-                 y[1] - y[0],
-                 ) for x, y in row["Phase"].items()
-            ]
-
-            for i in range(0, len(row["Phase"])):
-                if row["Phase"][i][2] >= row["Period"]:
-                    row["Phase"][i] = [row["Phase"][i][0], row["Phase"][i][1], "[" + "*"*50 + "]"]
-                else:
-                    row["Phase"][i] = [row["Phase"][i][0], row["Phase"][i][1], phase2str(row["Phase"][i][1])]
-        else:
-            row["Phase"] = ""
-        stars.append(row)
-    # stars is list of dict [{.star_rec with keys..},{...}, {...}]
-
-    stars = sorted(stars, key=lambda k: (float(k['Mag']), k["sort_date"]))
-    stars = sorted(stars, key=lambda k: (k["Phase"] != ""), reverse=True)
-    stars = sorted(stars, key=lambda k: (k["Done"]))  # Done are last ones
-    # return sorted(stars, key=lambda k: k['Mag'])
-    return stars
 
 
 def date_linspace(start, end, steps):
@@ -481,7 +274,7 @@ def plot_star_bokeh(star, user):
     tools = 'pan,wheel_zoom,box_zoom,reset,save'
     title = f"EB system: {star.star_name}"
 
-    plot = figure(title=title, plot_height=400, plot_width=800,
+    plot = figure(title=title, height=400, width=800,
                   x_axis_type='datetime', min_border=10,
                   y_range=(min(obj_alt)-10, max(obj_alt)+10),
                   tools=tools
@@ -497,10 +290,10 @@ def plot_star_bokeh(star, user):
     plot.line(t_delta, moon_alt, color='yellow', line_width=2.)
 
     plot.xaxis.ticker.desired_num_ticks = 10
-    plot.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
-                                                 minutes=["%H:%M:%S"],
-                                                 minsec=["%H:%M:%S"],
-                                                 hours=["%H:%M:%S"])
+    plot.xaxis.formatter = DatetimeTickFormatter(seconds="%H:%M:%S",
+                                                 minutes="%H:%M:%S",
+                                                 minsec="%H:%M:%S",
+                                                 hours="%H:%M:%S")
 
     t_ph_str = [f"{x:.2f}" for x in t_phase]
     t_ph_str = t_ph_str[0::20]  # each 20th point to display
@@ -532,17 +325,17 @@ def plot_star_bokeh(star, user):
     plot.add_tools(hover)
     #####
 
-    p2 = figure(plot_height=150, plot_width=800, x_range=plot.x_range,
+    p2 = figure(height=150, width=800, x_range=plot.x_range,
                 y_axis_location="left", x_axis_type='datetime', tools=tools)
     p2.output_backend = "svg"
     p2.yaxis.axis_label = r"Azimuth [deg]"
     p2.xaxis.axis_label = r"Time [UT]"
     p2.line(t_delta, obj_az, color='black', line_width=2.)
     p2.xaxis.ticker.desired_num_ticks = 10
-    p2.xaxis.formatter = DatetimeTickFormatter(seconds=["%H:%M:%S"],
-                                               minutes=["%H:%M:%S"],
-                                               minsec=["%H:%M:%S"],
-                                               hours=["%H:%M:%S"])
+    p2.xaxis.formatter = DatetimeTickFormatter(seconds="%H:%M:%S",
+                                               minutes="%H:%M:%S",
+                                               minsec="%H:%M:%S",
+                                               hours="%H:%M:%S")
     p2.add_tools(hover)
 
     layout = gridplot([[plot], [p2]], toolbar_options=dict(logo=None))
