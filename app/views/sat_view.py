@@ -1,7 +1,8 @@
 import os
 import time
+import math
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, render_template_string
+from flask import Blueprint, render_template, redirect, url_for, request, flash, current_app, render_template_string, jsonify
 from flask_login import login_required, current_user
 from flask_wtf import FlaskForm
 from wtforms import IntegerField, SubmitField, DateField, SelectField
@@ -53,6 +54,17 @@ def space_track_callback(until):
     current_app.logger.info('Sleeping for {:d} seconds.'.format(duration))
 
 
+def seconds_until_safe_time(now=None):
+    now = now or datetime.now()
+    if 0 <= now.minute <= 5:
+        safe_at = now.replace(minute=6, second=0, microsecond=0)
+    elif 30 <= now.minute <= 35:
+        safe_at = now.replace(minute=36, second=0, microsecond=0)
+    else:
+        return 0
+    return max(0, math.ceil((safe_at - now).total_seconds()))
+
+
 def filter_latest_tle(data):
     """
     Приймає список словників (JSON від Space-Track).
@@ -80,25 +92,24 @@ def wait_for_safe_time():
     """
     while True:
         now = datetime.now()
-        minute = now.minute
-
-        # Визначаємо небезпечні вікна
-        is_busy_start = (0 <= minute <= 5)
-        is_busy_middle = (30 <= minute <= 35)
-
-        if is_busy_start or is_busy_middle:
-            # Розраховуємо, скільки секунд залишилося до кінця "червоної зони"
-            wait_minutes = 6 - minute if is_busy_start else 36 - minute
-            current_app.logger.info(f"[{now.strftime('%H:%M:%S')}] Peak load time on Space-Track. Waiting {wait_minutes} minutes.")
-            # print(f"[{now.strftime('%H:%M:%S')}] Peak load time on Space-Track. Waiting {wait_minutes} minutes.")
-            flash(f"[{now.strftime('%H:%M:%S')}] Peak load time on Space-Track. Waiting {wait_minutes} minutes.")
-
-            # Чекаємо 30 секунд перед наступною перевіркою, щоб не вантажити CPU
-            time.sleep(30)
+        wait_seconds = seconds_until_safe_time(now)
+        if wait_seconds:
+            current_app.logger.info(
+                f"[{now.strftime('%H:%M:%S')}] Peak load time on Space-Track. "
+                f"Waiting {wait_seconds} seconds."
+            )
+            time.sleep(min(30, wait_seconds))
         else:
-            # print(f"[{now.strftime('%H:%M:%S')}] Safe time. Stating query to space-track...")
-            current_app.logger.info(f"[{now.strftime('%H:%M:%S')}] Safe time. Stating query to space-track...")
+            current_app.logger.info(f"[{now.strftime('%H:%M:%S')}] Safe time. Starting query to Space-Track...")
             break
+
+
+@sat_view_bp.route('/sat_pas/safe_time')
+@login_required
+def safe_time_status():
+    if not current_user.sat_access:
+        return jsonify(error='Satellite access is required.'), 403
+    return jsonify(wait_seconds=seconds_until_safe_time())
 
 
 def update_tle(nor_list, t2):

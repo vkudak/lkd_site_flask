@@ -194,7 +194,7 @@ def sat_lc_period_plot(lc_id):
 @login_required
 def sat_download_lc(lc_id):
     mem, filename = lc_to_file(lc_id)
-    return send_file(mem, as_attachment=True, attachment_filename=filename, mimetype='text/csv')
+    return send_file(mem, as_attachment=True, download_name=filename, mimetype='text/csv')
 
 
 @cache.memoize(timeout=300)

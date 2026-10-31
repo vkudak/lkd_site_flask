@@ -18,7 +18,7 @@ function confirmAction(){
 </script>
 
 {#<form method="POST" action="{{ url_for('sat_view.sat_passes') }}">#}
-<form method="POST" action="{{ url_for('sat_view.sat_passes') }}">
+<form id="satellite-selection-form" method="POST" action="{{ url_for('sat_view.sat_passes') }}" data-safe-time-url="{{ url_for('sat_view.safe_time_status') }}">
     {{ form.hidden_tag() }} <!-- CSRF-токен -->
     <!-- Таблиця з супутниками -->
     <div style="text-align: center; width:80%; max-width: 820px; margin-left: auto; margin-right: auto;">
@@ -79,12 +79,11 @@ function confirmAction(){
                         {% if current_user.sat_access %}
                             <td>
                                 <!-- Кнопка для видалення супутника -->
-                                <form method="POST" action="{{ url_for('sat_view.delete_satellite', norad=satellite.norad) }}" style="display: inline;">
-                                    {{ form.hidden_tag() }}
-                                    <button type="submit" id="red_btn" onclick='return confirmAction()'>
-                                        Delete
-                                    </button>
-                                </form>
+                                <button type="submit" id="red_btn"
+                                        formaction="{{ url_for('sat_view.delete_satellite', norad=satellite.norad) }}"
+                                        formmethod="post" onclick='return confirmAction()'>
+                                    Delete
+                                </button>
                             </td>
                         {% endif %}
                     </tr>
@@ -100,6 +99,43 @@ function confirmAction(){
         </div>
     </div>
 </form>
+
+<style>
+    #sat-wait-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(5, 10, 12, 0.82);
+    }
+    #sat-wait-panel {
+        width: min(100%, 380px);
+        padding: 28px;
+        border: 1px solid #53656c;
+        background: #172126;
+        color: #e3ecef;
+        text-align: center;
+    }
+    #sat-wait-panel h2 {
+        margin-bottom: 12px;
+    }
+    #sat-wait-countdown {
+        margin: 12px 0;
+        color: #91c9b0;
+        font-size: 2.5rem;
+        font-variant-numeric: tabular-nums;
+    }
+</style>
+<div id="sat-wait-overlay" role="dialog" aria-modal="true" aria-labelledby="sat-wait-title" aria-live="polite">
+    <div id="sat-wait-panel">
+        <h2 id="sat-wait-title">Please wait</h2>
+        <p id="sat-wait-message">Checking Space-Track availability...</p>
+        <div id="sat-wait-countdown"></div>
+    </div>
+</div>
 
    <!-- Форма для додавання нового супутника -->
     <div style="margin-top: 50px; text-align: center;">
@@ -142,6 +178,61 @@ function confirmAction(){
                 ]
             }
         );
+    });
+
+    let satelliteSubmissionPending = false;
+    document.getElementById('satellite-selection-form').addEventListener('submit', async function (event) {
+        if (event.submitter && event.submitter.hasAttribute('formaction')) {
+            return;
+        }
+
+        event.preventDefault();
+        if (satelliteSubmissionPending) {
+            return;
+        }
+        satelliteSubmissionPending = true;
+        const form = this;
+        const overlay = document.getElementById('sat-wait-overlay');
+        const message = document.getElementById('sat-wait-message');
+        const countdown = document.getElementById('sat-wait-countdown');
+        overlay.style.display = 'flex';
+
+        try {
+            const statusResponse = await fetch(form.dataset.safeTimeUrl, { credentials: 'same-origin' });
+            if (!statusResponse.ok) {
+                throw new Error('Could not check Space-Track availability.');
+            }
+
+            const status = await statusResponse.json();
+            const safeTimeAt = Date.now() + Math.max(0, Number(status.wait_seconds) || 0) * 1000;
+            let remaining = Math.ceil((safeTimeAt - Date.now()) / 1000);
+
+            while (remaining > 0) {
+                message.textContent = 'Space-Track is in its busy window. Calculation will start when it ends.';
+                countdown.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
+                await new Promise(resolve => setTimeout(resolve, Math.min(1000, remaining * 1000)));
+                remaining = Math.ceil((safeTimeAt - Date.now()) / 1000);
+            }
+
+            countdown.textContent = '';
+            message.textContent = 'Calculating satellite passes...';
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                credentials: 'same-origin'
+            });
+            if (!response.ok) {
+                throw new Error('The calculation request failed.');
+            }
+
+            document.open();
+            document.write(await response.text());
+            document.close();
+        } catch (error) {
+            overlay.style.display = 'none';
+            satelliteSubmissionPending = false;
+            alert(error.message);
+        }
     });
 </script>
 

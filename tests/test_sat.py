@@ -5,6 +5,15 @@ import matplotlib
 matplotlib.use("Agg")
 from test_lc_upload import create_super_user
 from app.models import Satellite, Lightcurve
+from app.views.sat_view import seconds_until_safe_time
+
+
+def test_seconds_until_safe_time():
+    assert seconds_until_safe_time(datetime(2026, 10, 31, 0, 0, 0)) == 360
+    assert seconds_until_safe_time(datetime(2026, 10, 31, 0, 5, 59)) == 1
+    assert seconds_until_safe_time(datetime(2026, 10, 31, 12, 30, 15)) == 345
+    assert seconds_until_safe_time(datetime(2026, 10, 31, 12, 6, 0)) == 0
+    assert seconds_until_safe_time(datetime(2026, 10, 31, 12, 35, 59)) == 1
 
 
 def test_sat_phot(client, auth):
@@ -40,6 +49,11 @@ def test_sat_all(client, auth):
     lc = Lightcurve.get_by_lc_start(51511, st_time)[0]
     sat = Satellite.get_by_norad(51511)
     assert lc is not None
+    response = client.get(f"/sat_download_lc.html/{lc.id}")
+    assert response.status_code == 200
+    assert response.mimetype == "text/csv"
+    assert response.headers["Content-Disposition"].startswith("attachment;")
+
     response = client.get(f"/sat_details.html/{sat.id}")
     assert response.status_code == 200
     assert b"Satellite NORAD=" in response.data
