@@ -1,4 +1,7 @@
 .idea
+.vscode/
+.cache.sqlite
+.coverage
 __pycache__/
 *.pyc
 /flask_session/
