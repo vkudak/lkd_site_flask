@@ -13,3 +13,4 @@ __pycache__/
 /AGENTS.md
 instance/test.db
 coverage.json
+cache/
