@@ -18,6 +18,18 @@ def test_seconds_until_safe_time():
     assert seconds_until_safe_time(datetime(2026, 10, 31, 12, 35, 59)) == 1
 
 
+def test_satellite_selection_shows_wait_dialog(client, auth):
+    create_super_user()
+    auth.login("super_user", "user_pass")
+
+    response = client.get("/sat_pas/sat_select.html")
+
+    assert response.status_code == 200
+    assert b"You can wait or cancel TLE update and RSO passes calculation" in response.data
+    assert b'id="sat-wait-ok"' in response.data
+    assert b'id="sat-wait-cancel"' in response.data
+
+
 def test_sat_phot(client, auth):
     create_super_user()
     auth.login("super_user", "user_pass")

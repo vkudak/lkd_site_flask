@@ -128,12 +128,23 @@ function confirmAction(){
         font-size: 2.5rem;
         font-variant-numeric: tabular-nums;
     }
+    #sat-wait-actions {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 20px;
+    }
 </style>
 <div id="sat-wait-overlay" role="dialog" aria-modal="true" aria-labelledby="sat-wait-title" aria-live="polite">
     <div id="sat-wait-panel">
         <h2 id="sat-wait-title">Please wait</h2>
         <p id="sat-wait-message">Checking Space-Track availability...</p>
+        <p>You can wait or cancel TLE update and RSO passes calculation</p>
         <div id="sat-wait-countdown"></div>
+        <div id="sat-wait-actions">
+            <button id="sat-wait-ok" type="button" disabled>OK</button>
+            <button id="sat-wait-cancel" type="button">Cancel</button>
+        </div>
     </div>
 </div>
 
@@ -195,10 +206,35 @@ function confirmAction(){
         const overlay = document.getElementById('sat-wait-overlay');
         const message = document.getElementById('sat-wait-message');
         const countdown = document.getElementById('sat-wait-countdown');
+        const actions = document.getElementById('sat-wait-actions');
+        const okButton = document.getElementById('sat-wait-ok');
+        const cancelButton = document.getElementById('sat-wait-cancel');
+        let cancelRequested = false;
+        let resolveChoice;
+
+        const cancel = () => {
+            cancelRequested = true;
+            satelliteSubmissionPending = false;
+            overlay.style.display = 'none';
+            if (resolveChoice) {
+                resolveChoice(false);
+            }
+        };
+
+        cancelButton.onclick = cancel;
+        okButton.onclick = () => {
+            if (resolveChoice) {
+                resolveChoice(true);
+            }
+        };
+        okButton.disabled = true;
         overlay.style.display = 'flex';
 
         try {
             const statusResponse = await fetch(form.dataset.safeTimeUrl, { credentials: 'same-origin' });
+            if (cancelRequested) {
+                return;
+            }
             if (!statusResponse.ok) {
                 throw new Error('Could not check Space-Track availability.');
             }
@@ -207,14 +243,29 @@ function confirmAction(){
             const safeTimeAt = Date.now() + Math.max(0, Number(status.wait_seconds) || 0) * 1000;
             let remaining = Math.ceil((safeTimeAt - Date.now()) / 1000);
 
-            while (remaining > 0) {
-                message.textContent = 'Space-Track is in its busy window. Calculation will start when it ends.';
+            while (remaining > 0 && !cancelRequested) {
+                message.textContent = 'Space-Track is in its busy window. Wait for the countdown, then select OK to continue.';
                 countdown.textContent = `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`;
                 await new Promise(resolve => setTimeout(resolve, Math.min(1000, remaining * 1000)));
                 remaining = Math.ceil((safeTimeAt - Date.now()) / 1000);
             }
 
+            if (cancelRequested) {
+                return;
+            }
+
             countdown.textContent = '';
+            okButton.disabled = false;
+            message.textContent = 'Safe time reached. Select OK to continue or Cancel to return to satellite selection.';
+            const shouldProceed = await new Promise(resolve => {
+                resolveChoice = resolve;
+            });
+            resolveChoice = null;
+            if (!shouldProceed) {
+                return;
+            }
+
+            actions.style.display = 'none';
             message.textContent = 'Calculating satellite passes...';
             const response = await fetch(form.action, {
                 method: 'POST',
@@ -229,8 +280,12 @@ function confirmAction(){
             document.write(await response.text());
             document.close();
         } catch (error) {
+            if (cancelRequested) {
+                return;
+            }
             overlay.style.display = 'none';
             satelliteSubmissionPending = false;
+            actions.style.display = 'flex';
             alert(error.message);
         }
     });
