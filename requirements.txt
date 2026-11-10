@@ -32,6 +32,7 @@ scipy>=1.9,<2
 skyfield>=1.49,<2
 spacetrack>=1.3,<2
 statsmodels>=0.14,<0.15
+Flask-Admin>=2.2,<3
 
 # Test dependencies
 matplotlib>=3.8,<4

@@ -14,3 +14,5 @@ __pycache__/
 instance/test.db
 coverage.json
 cache/
+dev.db
+plans.md

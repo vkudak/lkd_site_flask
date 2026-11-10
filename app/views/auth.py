@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, FloatField, SubmitField
@@ -38,6 +40,14 @@ class LoginForm(FlaskForm):
     submit = SubmitField("Login")
 
 
+def is_safe_next(target):
+    """Allow only same-site relative paths (blocks open redirect)."""
+    if not target or "\\" in target:
+        return False
+    parsed = urlparse(target)
+    return not parsed.scheme and not parsed.netloc and target.startswith("/") and not target.startswith("//")
+
+
 # somewhere to login
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -62,7 +72,13 @@ def login():
                 login_user(user)
                 current_app.logger.info('User <%s> logged in', user.username)
                 # return render_template("index.html")
-                redirect_url = request.args.get('next') or url_for('home.index')
+                next_url = request.args.get('next')
+                if next_url:
+                    # Flask-Admin passes an absolute URL; keep only its path
+                    p = urlparse(next_url)
+                    if p.netloc == request.host:
+                        next_url = p.path + (f"?{p.query}" if p.query else "")
+                redirect_url = next_url if is_safe_next(next_url) else url_for('home.index')
                 return redirect(redirect_url)
             else:
                 current_app.logger.info('User <%s> wrong password', user.username)

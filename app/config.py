@@ -31,6 +31,11 @@ class Config:
 
     # UPLOAD_FOLDER = path.join(basedir, "app", "static", "tmp-file")
 
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    REMEMBER_COOKIE_HTTPONLY = True
+    REMEMBER_COOKIE_SAMESITE = "Lax"
+
 
 class ProdConfig(Config):
     FLASK_ENV = 'production'

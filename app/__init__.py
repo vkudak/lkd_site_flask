@@ -81,6 +81,9 @@ def create_app():
         app.register_blueprint(api_bp)
         csrf.exempt(api_bp)    # <---- This line disables CSRF for API
 
+        from app.admin import init_admin
+        init_admin(app)
+
 
         login_manager.login_view = "auth.login"
         # app.app_context().push()
