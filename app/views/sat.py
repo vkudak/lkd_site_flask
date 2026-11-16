@@ -68,9 +68,15 @@ def sat_phot():
         else:  # POST
             current_app.logger.info(f'POST request in sat_phot()...')
             if lc_form.validate_on_submit() and lc_form.add.data:
+                is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                files = lc_form.lc_file.data
+                if is_ajax and len(files) != 1:
+                    return jsonify(error="Upload exactly one file at a time."), 400
+
                 # print(lc_form.lc_file.data, end="  ")
                 current_app.logger.info(f'Form Valid. Checking files in {lc_form.lc_file.data}')
-                for file in lc_form.lc_file.data:
+                upload_result = None
+                for file in files:
                     file_ext = os.path.splitext(file.filename)
                     file_ext = file_ext[1]
                     if len(file_ext) > 2:
@@ -82,16 +88,28 @@ def sat_phot():
                         process_res = process_lc_file(file=file, file_ext=fext, db=db, app=current_app)
                         if process_res:
                             current_app.logger.info(f'File {file.filename} successfully processed')
+                            upload_result = {'status': 'processed', 'filename': file.filename}
                         else:
                             current_app.logger.warning(f"""File {file.filename} processed with error. 
                             Skipping this file....""")
-                            flash(f"File {file.filename} processed with error", 'error')
+                            if is_ajax:
+                                upload_result = {'status': 'error', 'filename': file.filename}
+                            else:
+                                flash(f"File {file.filename} processed with error", 'error')
                     else:
                         current_app.logger.warning(f'''Wrong file ext in {file.filename}.
                                                    Skipping this file....''')
-                        flash(f"Wrong file ext in {file.filename}", 'info')
+                        if is_ajax:
+                            upload_result = {'status': 'skipped', 'filename': file.filename}
+                        else:
+                            flash(f"Wrong file ext in {file.filename}", 'info')
                 cache.clear()
+                if is_ajax:
+                    return jsonify(upload_result)
                 return redirect(url_for("sat.sat_phot"))
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify(error="Invalid upload form or missing file."), 400
 
             if report_form.validate_on_submit():
                 d_from_s = report_form.d_from.data

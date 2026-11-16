@@ -5,6 +5,39 @@
 <!-- Table  of available SATELLITES-->
 {#    https://datatables.net/examples/server_side/simple.html #}
 <br>
+<style>
+    #lc-upload-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.7);
+    }
+    #lc-upload-panel {
+        width: min(100% - 32px, 420px);
+        padding: 24px;
+        border: 1px solid #53656c;
+        background: #172126;
+        color: #e3ecef;
+        text-align: center;
+    }
+    #lc-upload-progress {
+        width: 100%;
+        margin: 12px 0;
+    }
+</style>
+<div id="lc-upload-overlay" role="dialog" aria-modal="true" aria-labelledby="lc-upload-title" aria-live="polite">
+    <div id="lc-upload-panel">
+        <h2 id="lc-upload-title">Uploading lightcurves</h2>
+        <p id="lc-upload-message"></p>
+        <progress id="lc-upload-progress" max="1" value="0"></progress>
+        <ul id="lc-upload-errors" style="text-align: left;"></ul>
+        <button id="lc-upload-close" type="button" style="display: none;">Close</button>
+    </div>
+</div>
+
    <div style="text-align: center; width:80%; max-width: 820px; margin-left: auto; margin-right: auto;">
        <table id="sat_table"
 
@@ -109,6 +142,85 @@
 {% endfor %}
 {% endif %}
 
+<script>
+    const lcUploadForm = document.querySelector('form[enctype="multipart/form-data"]');
+    if (lcUploadForm) {
+        let closeUploadTimeout;
+        lcUploadForm.addEventListener('submit', async function (event) {
+            event.preventDefault();
+
+            const fileInput = lcUploadForm.querySelector('input[type="file"]');
+            const submitButton = lcUploadForm.querySelector('[name="add"]');
+            const files = Array.from(fileInput.files);
+            if (!files.length || submitButton.disabled) {
+                return;
+            }
+
+            const overlay = document.getElementById('lc-upload-overlay');
+            const message = document.getElementById('lc-upload-message');
+            const progress = document.getElementById('lc-upload-progress');
+            const errors = document.getElementById('lc-upload-errors');
+            const closeButton = document.getElementById('lc-upload-close');
+            const failedFiles = [];
+            let completed = 0;
+
+            window.clearTimeout(closeUploadTimeout);
+            submitButton.disabled = true;
+            progress.max = files.length;
+            progress.value = completed;
+            errors.replaceChildren();
+            closeButton.style.display = 'none';
+            overlay.style.display = 'flex';
+
+            for (const file of files) {
+                message.textContent = `Processing file ${completed + 1} of ${files.length}: ${file.name}`;
+
+                const formData = new FormData(lcUploadForm);
+                formData.delete(fileInput.name);
+                formData.append(fileInput.name, file);
+                formData.append(submitButton.name, submitButton.value);
+
+                try {
+                    const response = await fetch(lcUploadForm.action || window.location.href, {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    });
+                    const result = await response.json();
+                    if (!response.ok || result.status !== 'processed') {
+                        failedFiles.push(`${file.name}: ${result.error || result.status || 'Upload failed'}`);
+                    }
+                } catch (error) {
+                    failedFiles.push(`${file.name}: ${error.message}`);
+                }
+
+                completed += 1;
+                progress.value = completed;
+            }
+
+            message.textContent = failedFiles.length
+                ? `Finished ${completed} of ${files.length} files; ${failedFiles.length} need attention.`
+                : `Finished processing all ${completed} files.`;
+            for (const error of failedFiles) {
+                const item = document.createElement('li');
+                item.textContent = error;
+                errors.appendChild(item);
+            }
+
+            $('#sat_table').DataTable().ajax.reload(null, false);
+            closeButton.style.display = 'inline-block';
+            closeButton.onclick = () => {
+                window.clearTimeout(closeUploadTimeout);
+                overlay.style.display = 'none';
+            };
+            submitButton.disabled = false;
+            closeUploadTimeout = window.setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 3000);
+        });
+    }
+</script>
 
 <script>
     var csrf_token = "{{ csrf_token() }}";

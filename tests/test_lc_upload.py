@@ -60,6 +60,32 @@ def test_phc_lc_upload(client, caplog, auth):
     assert lc1 is not None
 
 
+def test_phc_lc_upload_returns_processing_result_for_progress_ui(client, auth):
+    create_super_user()
+    auth.login("super_user", "user_pass")
+
+    with open("tests/lc_to_upload/51511_250130_1719.phc", "rb") as uploaded_file:
+        response = client.post(
+            "/sat_phot.html",
+            data={
+                "lc_file": [FileStorage(
+                    stream=uploaded_file,
+                    filename="51511_250130_1719.phc",
+                    content_type="application/octet-stream"
+                )],
+                "add": "1"
+            },
+            headers={"X-Requested-With": "XMLHttpRequest"},
+            content_type="multipart/form-data"
+        )
+
+    assert response.status_code == 200
+    assert response.json == {
+        "status": "processed",
+        "filename": "51511_250130_1719.phc"
+    }
+
+
 def test_phx_lc_upload(client, caplog, auth):
     """Перевіряє завантаження НОВИХ файлів PHX кривих блиску через форму AddLcForm."""
     create_super_user()
